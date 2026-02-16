@@ -2,9 +2,10 @@ fastapi
 uvicorn
 requests
 python-dotenv
-langchain
-langchain-community
+langchain>=0.3,<0.4
+langchain-community>=0.3,<0.4
 langchain-huggingface
-langchain-deepseek
+langchain-deepseek<1.0
 chromadb
-sentence-transformers
+sentence-transformers==2.7.0
+transformers>=4.41,<4.52

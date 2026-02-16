@@ -6,13 +6,6 @@ Now enhanced with Retrieval-Augmented Generation (RAG), custom templates, multi-
 
 ---
 
-## 🔗 Visit
-
-- **Web App**: [https://hey-write.vercel.app](https://hey-write.vercel.app)
-
-
----
-
 ## 🚀 Features
 
 -  Generate instant writing drafts from your one-sentence intent
