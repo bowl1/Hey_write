@@ -6,6 +6,12 @@ Now enhanced with Retrieval-Augmented Generation (RAG), custom templates, multi-
 
 ---
 
+## 🌐 Live Demo
+
+- https://hey-write.vercel.app/
+
+---
+
 ## 🚀 Features
 
 -  Generate instant writing drafts from your one-sentence intent
@@ -56,9 +62,28 @@ python3 chroma_setup/chroma_db.py
 4. **Document Draft Output**  
 5. **Editable + Copyable + Chat History Aware**
 
-Template mode uses vector similarity distance for match gating (`similarity_search_with_score`), with default threshold `SIMILARITY_THRESHOLD = 0.35` (configurable via env var) in `chatbox-backend/langchain_runner/rag_chain.py`.
+Template mode uses vector similarity distance for match gating (`similarity_search_with_score`), with default threshold `SIMILARITY_THRESHOLD = 0.65` (configurable via env var) in `chatbox-backend/langchain_runner/rag_chain.py`.
 
----
+## 🖥️ Local Run
+
+Prerequisites:
+- Python 3
+- Node.js + npm
+
+Run frontend + backend with one command:
+
+```bash
+./run_local.sh
+```
+
+Script behavior:
+- Auto-creates `chatbox-backend/.venv` if missing
+- Starts backend at `http://127.0.0.1:8000`
+- Starts frontend via CRA dev server
+
+Stop:
+- Close the frontend terminal session (the script then stops backend as well)
+
 
 ## 📸 Screenshots
 
