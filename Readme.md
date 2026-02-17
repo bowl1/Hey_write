@@ -96,24 +96,26 @@ Stop:
 
 ### Web UI
 
+<img src="images/web0.png" alt="Web UI 0" width="1000">  
+
 #### 📄 User Case: Project Weekly Report  
 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <img src="images/web1.png" alt="Web UI 1" width="300">    
-  <img src="images/web2.png" alt="Web UI 2" width="300">    
-  <img src="images/web3.png" alt="Web UI 3" width="300">    
+  <img src="images/web1.png" alt="Web UI 1" width="1000">    
+  <img src="images/web2.png" alt="Web UI 2" width="1000">    
+  <img src="images/web3.png" alt="Web UI 3" width="1000">    
 </div>
 
 #### ⚠️ No Matched Template (using "Generate with templates" button)  
 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <img src="images/web4.png" alt="Web UI 4" width="300">  
+  <img src="images/web4.png" alt="Web UI 4" width="1000">  
 </div>
 
 #### 📑 User Case: Contract Risk Review  
 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <img src="images/web5.png" alt="Web UI 5" width="300">  
-  <img src="images/web6.png" alt="Web UI 6" width="300">  
-  <img src="images/web7.png" alt="Web UI 7" width="300">  
-  <img src="images/web8.png" alt="Web UI 8" width="300">  
+  <img src="images/web5.png" alt="Web UI 5" width="1000">  
+  <img src="images/web6.png" alt="Web UI 6" width="1000">  
+  <img src="images/web7.png" alt="Web UI 7" width="1000">  
+  <img src="images/web8.png" alt="Web UI 8" width="1000">  
 </div>
 
 ---
