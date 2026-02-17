@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: heywrite-backend
+    env: docker
+    dockerfilePath: ./chatbox-backend/dockerfile
+    dockerContext: ./chatbox-backend
+    plan: free
+    autoDeploy: false
+    envVars:
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

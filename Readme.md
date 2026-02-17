@@ -29,27 +29,14 @@ Now enhanced with Retrieval-Augmented Generation (RAG), custom templates, multi-
 | Category        | Technology                            |
 |----------------|----------------------------------------|
 | **Frontend**    | React + TypeScript (deployed via Vercel)|
-| **Backend**     | FastAPI (Dockerized, deployed on AWS EC2) |
+| **Backend**     | FastAPI (deployed on Render) |
 | **AI Model**    | DeepSeek Chat API                     |
 | **Embedding**   | OpenAI Embeddings (`text-embedding-3-small`)  |
 | **Vector Store**| ChromaDB                              |
 | **Frameworks**  | LangChain for RAG and template routing |
-| **Deployment**  | Docker + Nginx + HTTPS (Let’s Encrypt), GitHub Actions, AWS EC2|
+| **Deployment**  | Render + Docker+ GitHub Actions |
 ---
 
-## 🔐 Environment Variables
-
-Backend requires the following keys:
-
-- `DEEPSEEK_API_KEY` (for chat generation)
-- `OPENAI_API_KEY` (for template embeddings and retrieval)
-
-Example in `.env`:
-
-```env
-DEEPSEEK_API_KEY=your_deepseek_key
-OPENAI_API_KEY=your_openai_key
-```
 
 ## 🧱 Build / Rebuild Vector DB
 
@@ -59,6 +46,7 @@ When templates change, or when switching embedding models, rebuild Chroma:
 cd chatbox-backend
 python3 chroma_setup/chroma_db.py
 ```
+
 
 ## 📂 Architecture Overview
 

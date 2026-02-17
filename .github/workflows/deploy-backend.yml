@@ -1,4 +1,4 @@
-name: Build and Deploy to EC2 with Docker
+name: Trigger Render Backend Deploy
 
 on:
   push:
@@ -6,38 +6,10 @@ on:
       - master
 
 jobs:
-  deploy:
+  trigger-render-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: SSH into EC2 and build & run container
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e  # 遇到错误立即退出
-
-            echo "Cleaning up old instance..."
-            docker stop chatbox-backend || true
-            docker rm chatbox-backend || true
-            rm -rf HeyWrite
-
-            echo "Cloning repository..."
-            git clone https://github.com/bowl1/HeyWrite.git
-            cd HeyWrite/chatbox-backend
-
-            echo "Injecting environment variables..."
-            echo "DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}" > .env
-
-            echo "Building Docker image..."
-            docker build --network=host -t chatbox-backend .
-
-            echo "Running Docker container..."
-            docker run -d --name chatbox-backend --env-file .env -p 8000:8000 chatbox-backend
-
-            echo "Deployment completed!"
+      - name: Trigger Render Deploy Hook
+        run: |
+          curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
