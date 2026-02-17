@@ -1,6 +1,6 @@
 from langchain_community.vectorstores import Chroma
 from langchain.prompts import PromptTemplate
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain.chains import LLMChain
 from langchain_deepseek import ChatDeepSeek
 import os
@@ -14,11 +14,16 @@ logger = logging.getLogger(__name__)
 # 加载环境变量
 load_dotenv()
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY is required for text-embedding-3-small")
+
 # 初始化嵌入模型
-embedding = HuggingFaceEmbeddings(
-    model_name="intfloat/e5-small-v2"
+embedding = OpenAIEmbeddings(
+    model="text-embedding-3-small",
+    api_key=OPENAI_API_KEY,
 )
 
 

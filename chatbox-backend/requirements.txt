@@ -4,6 +4,7 @@ requests
 python-dotenv
 langchain>=0.3,<0.4
 langchain-community>=0.3,<0.4
+langchain-openai
 langchain-huggingface
 langchain-deepseek<1.0
 chromadb

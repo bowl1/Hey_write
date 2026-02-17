@@ -1,11 +1,19 @@
 
 from langchain_community.vectorstores import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain.docstore.document import Document
+from dotenv import load_dotenv
 import os, json
 
-embedding = HuggingFaceEmbeddings(
-    model_name="intfloat/e5-small-v2"
+load_dotenv()
+
+openai_api_key = os.getenv("OPENAI_API_KEY")
+if not openai_api_key:
+    raise ValueError("OPENAI_API_KEY is required for text-embedding-3-small")
+
+embedding = OpenAIEmbeddings(
+    model="text-embedding-3-small",
+    api_key=openai_api_key,
 )
 
 docs = []
