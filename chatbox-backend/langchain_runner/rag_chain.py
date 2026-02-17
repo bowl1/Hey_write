@@ -33,11 +33,12 @@ try:
     vectorstore = Chroma(
         persist_directory=persist_directory, embedding_function=embedding
     )
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
     logger.info("成功加载 Chroma 向量库")
 except Exception as e:
     logger.error(f" 加载 Chroma 向量库失败: {e}")
     raise
+
+SIMILARITY_THRESHOLD = 0.38
 
 # PromptTemplate
 prompt = PromptTemplate.from_template(
@@ -103,14 +104,6 @@ except Exception as e:
 # 构造 LLMChain
 llm_chain = LLMChain(llm=llm, prompt=prompt)
 
-def is_irrelevant(docs, intent):
-    # 判断是否所有doc都不包含 intent 的关键词
-    intent_keywords = intent.lower().split()
-    return all(
-        not any(keyword in doc.page_content.lower() for keyword in intent_keywords)
-        for doc in docs
-    )
-
 # 主函数
 def generate_with_template(
     intent: str, style: str, language: str, history: list[dict] = None
@@ -120,12 +113,20 @@ def generate_with_template(
             return "please provide a valid intent"
 
         logger.info(f"searching intent: {intent}")
-        docs = retriever.get_relevant_documents(intent)
+        results = vectorstore.similarity_search_with_score(intent, k=3)
 
-        if not docs or is_irrelevant(docs, intent):  # 新加判断函数
+        if not results:
             logger.warning("did not find any template matched, please try the wild mode")
             return "did not find any template matched, please try the wild mode"
 
+        top_doc, top_dist = results[0]
+        logger.info(f"[template-match] dist={top_dist:.4f}")
+
+        if top_dist > SIMILARITY_THRESHOLD:
+            logger.warning("distance too far -> wild mode")
+            return "did not find any template matched, please try the wild mode"
+
+        docs = [doc for doc, _ in results]
         logger.info(f"found {len(docs)} templates")
         context = "\n\n".join([doc.page_content for doc in docs])
 

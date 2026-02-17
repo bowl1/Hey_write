@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
 import os
-from langchain_runner.rag_chain import generate_with_template
+from langchain_runner.build_vectorstore import build_if_missing
 from dotenv import load_dotenv
 import logging
 import uvicorn
@@ -11,6 +11,8 @@ import uvicorn
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 load_dotenv()
+build_if_missing()
+from langchain_runner.rag_chain import generate_with_template
 
 app = FastAPI()
 
@@ -97,5 +99,4 @@ def write_with_template(body: RequestBody):
         body.intent, body.style, body.language, body.history
     )
     return {"reply": result}
-
 

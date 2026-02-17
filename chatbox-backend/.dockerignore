@@ -19,3 +19,10 @@ node_modules
 *.safetensors
 *.model
 *.onnx
+
+chroma_db
+.venv
+__pycache__
+*.pt
+*.bin
+*.safetensors

@@ -56,6 +56,8 @@ python3 chroma_setup/chroma_db.py
 4. **Document Draft Output**  
 5. **Editable + Copyable + Chat History Aware**
 
+Template mode uses vector similarity distance for match gating (`similarity_search_with_score`), with default threshold `SIMILARITY_THRESHOLD = 0.38` in `chatbox-backend/langchain_runner/rag_chain.py`.
+
 ---
 
 ## 📸 Screenshots
