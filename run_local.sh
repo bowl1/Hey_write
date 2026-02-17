@@ -4,6 +4,10 @@ set -euo pipefail
 # 后端
 cd chatbox-backend
 
+if [ ! -f ".venv/bin/activate" ]; then
+  echo "Creating backend virtualenv..."
+  python3 -m venv .venv
+fi
 
 source .venv/bin/activate
 pip install -r requirements.txt

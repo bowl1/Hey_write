@@ -15,23 +15,22 @@ DB_DIR = os.getenv("CHROMA_DB_DIR", "./chroma_db")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 
 REWRITE_PROMPT = """
-You are generating a semantic intent description for vector search.
+You are generating example user requests.
 
-Convert the template into a single sentence describing:
-WHAT the user wants to do.
+Write 5 short natural phrases a user would type 
+to ask an AI to generate this kind of document.
 
 Rules:
-- Describe user intention, not the document name
-- Start with a verb
-- 10~20 words
-- No formatting words like "template" or "document"
-- Must be concrete and actionable
+- conversational English
+- 3–8 words
+- one per line
+- no numbering
+- no explanations
 
-Template Info:
+Template:
 Title: {title}
 Tags: {tags}
-Language: {language}
-Content Preview:
+Content:
 {preview}
 
 Return ONLY the sentence.
@@ -49,25 +48,32 @@ if DEEPSEEK_API_KEY:
 def _has_vectors(db_dir: str) -> bool:
     if not os.path.isdir(db_dir):
         return False
-    if len(os.listdir(db_dir)) == 0:
-        return False
+
     try:
+        embedding = OpenAIEmbeddings(
+            model="text-embedding-3-small",
+            api_key=os.getenv("OPENAI_API_KEY"),
+        )
+
         client = Chroma(
             persist_directory=db_dir,
-            embedding_function=OpenAIEmbeddings(
-                model="text-embedding-3-small",
-                api_key=os.getenv("OPENAI_API_KEY"),
-            ),
+            embedding_function=embedding,
         )
+
         if client._collection.count() <= 0:
             return False
-        # Router schema requires template_content in metadata.
-        sample = client._collection.get(include=["metadatas"], limit=1)
-        metas = sample.get("metadatas") or []
-        if not metas:
+
+        # 新增：维度检查
+        sample = client._collection.get(include=["embeddings"], limit=1)
+        db_dim = len(sample["embeddings"][0])
+        query_dim = len(embedding.embed_query("dimension check"))
+
+        if db_dim != query_dim:
+            print(f"Embedding dimension mismatch: db={db_dim}, query={query_dim}")
             return False
-        first_meta = metas[0] or {}
-        return "template_content" in first_meta
+
+        return True
+
     except Exception:
         return False
 
@@ -148,21 +154,33 @@ def build_if_missing() -> None:
         path = os.path.join(TEMPLATE_DIR, filename)
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-            description = _build_description(data, filename)
+
+            # 1. 取模板正文
             content = data.get("content", "") or json.dumps(data, ensure_ascii=False)
-            docs.append(
-                Document(
-                    page_content=description,
-                    metadata={
-                        "source": filename,
-                        "template_content": content,
-                        "description": description,
-                    },
+
+            # 2. 生成用户query描述（多行）
+            description = _build_description(data, filename)
+
+            queries = [q.strip() for q in description.split("\n") if q.strip()]
+
+            # 3. 每个query写入一个向量
+            for q in queries:
+                docs.append(
+                    Document(
+                        page_content=q,
+                        metadata={
+                            "source": filename,
+                            "template_content": content,
+                            "description": description,
+                        },
+                    )
                 )
-            )
 
     if not docs:
         raise ValueError(f"No templates found in {TEMPLATE_DIR}")
 
     Chroma.from_documents(docs, embedding, persist_directory=DB_DIR)
     print("Vector DB built successfully")
+    
+if __name__ == "__main__":
+    build_if_missing()

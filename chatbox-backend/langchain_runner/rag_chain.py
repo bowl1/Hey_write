@@ -11,11 +11,15 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 # 加载环境变量
 load_dotenv()
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+print("OPENAI_API_KEY loaded?", bool(os.getenv("OPENAI_API_KEY")))
+print("DEEPSEEK_API_KEY loaded?", bool(os.getenv("DEEPSEEK_API_KEY")))
 
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is required for text-embedding-3-small")
@@ -38,7 +42,7 @@ except Exception as e:
     logger.error(f" 加载 Chroma 向量库失败: {e}")
     raise
 
-SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.8"))
+SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.65"))
 
 # PromptTemplate
 prompt = PromptTemplate.from_template(
