@@ -11,7 +11,7 @@ from langchain.prompts import PromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_deepseek import ChatDeepSeek
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from pypdf import PdfReader
 from langchain_core.documents import Document
 
@@ -21,9 +21,16 @@ logger = logging.getLogger(__name__)
 ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=ROOT_ENV)
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-embedding = HuggingFaceEmbeddings(model_name="intfloat/e5-small-v2")
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY is required for text-embedding-3-small")
+
+embedding = OpenAIEmbeddings(
+    model="text-embedding-3-small",
+    api_key=OPENAI_API_KEY,
+)
 
 try:
     persist_directory = "./chroma_db"

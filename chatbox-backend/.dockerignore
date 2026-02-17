@@ -1,5 +1,21 @@
-__pycache__/
+__pycache__
 *.pyc
 *.pyo
+*.pyd
+*.log
+
+.venv
+venv
+env
+
+chroma_db
 
 .git
+.gitignore
+node_modules
+
+*.pt
+*.bin
+*.safetensors
+*.model
+*.onnx
