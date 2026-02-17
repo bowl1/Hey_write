@@ -9,6 +9,9 @@ venv
 env
 
 chroma_db
+chroma_db_backup_*
+templates/*.embedding.json
+build/
 
 .git
 .gitignore

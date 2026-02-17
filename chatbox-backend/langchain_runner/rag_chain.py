@@ -29,7 +29,7 @@ embedding = OpenAIEmbeddings(
 
 # 初始化 Chroma 向量库（假设已经预先插入模板内容）
 try:
-    persist_directory = "./chroma_db"
+    persist_directory = os.getenv("CHROMA_DB_DIR", "./chroma_db")
     vectorstore = Chroma(
         persist_directory=persist_directory, embedding_function=embedding
     )
@@ -38,7 +38,7 @@ except Exception as e:
     logger.error(f" 加载 Chroma 向量库失败: {e}")
     raise
 
-SIMILARITY_THRESHOLD = 0.38
+SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.8"))
 
 # PromptTemplate
 prompt = PromptTemplate.from_template(
@@ -128,7 +128,12 @@ def generate_with_template(
 
         docs = [doc for doc, _ in results]
         logger.info(f"found {len(docs)} templates")
-        context = "\n\n".join([doc.page_content for doc in docs])
+        context = "\n\n".join(
+            [
+                doc.metadata.get("template_content", doc.page_content)
+                for doc in docs
+            ]
+        )
 
         # 提取最近一条 assistant
         previous = ""
