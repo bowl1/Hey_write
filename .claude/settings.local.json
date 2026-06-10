@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp /Users/libowen/github/heywrite/PRODUCT.md /Users/libowen/Desktop/ai-recipes/PRODUCT.md)",
+      "Bash(cp /Users/libowen/github/heywrite/TECH.md /Users/libowen/Desktop/ai-recipes/TECH.md)",
+      "Bash(chmod +x /Users/libowen/Desktop/ai-recipes/start.sh)",
+      "Bash(ls /Users/libowen/Desktop/ai-recipes/.env*)",
+      "Bash(python -m pytest -v)",
+      "Bash(python3 -m pytest -v)",
+      "Bash(find \"/Users/libowen/github/behavior-aware wind turbine\" -name \"*2019*\" | head -40)",
+      "Bash(xargs du -sh)"
+    ]
+  }
+}

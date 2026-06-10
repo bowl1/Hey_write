@@ -4,28 +4,42 @@ from typing import List, Tuple
 
 from langchain_core.documents import Document
 
-from .chains import qa_chain
-from .vectorstore import retriever
-
 logger = logging.getLogger(__name__)
+
+qa_chain = None
+retriever = None
 
 
 def answer_with_context(question: str, language: str, style: str) -> Tuple[str, List[dict]]:
     if not question.strip():
         return "please provide a valid question", []
 
+    active_retriever = retriever
+    if active_retriever is None:
+        from .vectorstore import get_retriever
+
+        active_retriever = get_retriever()
+
     # Prefer standard retriever API when available; fallback to invoke for LCEL retrievers.
     docs: List[Document] = (
-        retriever.invoke(question)
-        if hasattr(retriever, "invoke")
-        else retriever.get_relevant_documents(question)
+        active_retriever.invoke(question)
+        if hasattr(active_retriever, "invoke")
+        else active_retriever.get_relevant_documents(question)
     )
     if not docs:
         return "I cannot find the answer in the provided documents.", []
     context = "\n\n".join(doc.page_content for doc in docs)
     logger.info(f"[QA] retrieved {len(docs)} docs for question: {question[:80]}")
 
-    result = qa_chain.invoke({"question": question, "context": context, "language": language, "style": style}).strip()
+    active_qa_chain = qa_chain
+    if active_qa_chain is None:
+        from .chains import get_qa_chain
+
+        active_qa_chain = get_qa_chain()
+
+    result = active_qa_chain.invoke(
+        {"question": question, "context": context, "language": language, "style": style}
+    ).strip()
 
     # 🔒 Guardrail：如果没有引用 page，拒答 (allow localized markers)
     citation_patterns = [

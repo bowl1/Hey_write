@@ -11,4 +11,5 @@ langchain-deepseek
 chromadb
 sentence-transformers
 pypdf
+Pillow
 pytest

@@ -9,7 +9,12 @@ done
 
 # 启动后端（带 access log）
 cd chatbox-backend
-uvicorn main:app --host 127.0.0.1 --port "$BACKEND_PORT" --reload --log-level info --access-log &
+if [ -x ".venv/bin/python" ]; then
+  PYTHON_BIN=".venv/bin/python"
+else
+  PYTHON_BIN="python3"
+fi
+"$PYTHON_BIN" -m uvicorn main:app --host 127.0.0.1 --port "$BACKEND_PORT" --reload --log-level info --access-log &
 BACK_PID=$!
 echo "Backend started on port $BACKEND_PORT with PID $BACK_PID"
 

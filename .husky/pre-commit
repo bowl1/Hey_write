@@ -15,5 +15,5 @@ fi
 $ARCH_PREFIX /bin/bash -lc '
   source .venv/bin/activate
   export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
-  pytest
+  python -m pytest
 '

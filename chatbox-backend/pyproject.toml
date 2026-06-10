@@ -22,6 +22,7 @@ dependencies = [
   "chromadb",
   "sentence-transformers",
   "pypdf",
+  "Pillow",
   "pytest",
 ]
 

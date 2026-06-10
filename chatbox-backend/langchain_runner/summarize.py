@@ -3,9 +3,6 @@ from typing import List
 
 from langchain_core.documents import Document
 
-from .chains import summary_map_chain, summary_reduce_chain
-from .vectorstore import vectorstore
-
 logger = logging.getLogger(__name__)
 
 
@@ -91,15 +88,25 @@ def summarize_docs(docs: List[Document], language: str, style: str) -> str:
 
     chunk_summaries = []
     for doc in docs:
-        summary = summary_map_chain.invoke({"chunk": doc.page_content, "language": language, "style": style}).strip()
+        from .chains import get_summary_map_chain
+
+        summary = get_summary_map_chain().invoke(
+            {"chunk": doc.page_content, "language": language, "style": style}
+        ).strip()
         chunk_summaries.append(summary)
 
     combined = "\n".join(chunk_summaries)
-    return summary_reduce_chain.invoke({"summaries": combined, "language": language, "style": style}).strip()
+    from .chains import get_summary_reduce_chain
+
+    return get_summary_reduce_chain().invoke(
+        {"summaries": combined, "language": language, "style": style}
+    ).strip()
 
 
 def summarize_all_docs(language: str, style: str) -> str:
-    raw = vectorstore.get(include=["documents", "metadatas"])
+    from .vectorstore import get_vectorstore
+
+    raw = get_vectorstore().get(include=["documents", "metadatas"])
     docs = [
         Document(page_content=doc, metadata=meta or {})
         for doc, meta in zip(raw.get("documents", []), raw.get("metadatas", []))

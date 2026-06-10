@@ -5,19 +5,46 @@ from typing import List
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from pypdf import PdfReader
+
+try:
+    from langchain_huggingface import HuggingFaceEmbeddings
+except ImportError:
+    from langchain_community.embeddings import HuggingFaceEmbeddings
 
 logger = logging.getLogger(__name__)
 
 EMBEDDING_MODEL = "intfloat/e5-small-v2"
 PERSIST_DIRECTORY = "./chroma_db"
 
-embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+embedding = None
+vectorstore = None
+retriever = None
 
-vectorstore = Chroma(persist_directory=PERSIST_DIRECTORY, embedding_function=embedding)
-retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
+
+def get_embedding():
+    global embedding
+    if embedding is None:
+        embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+    return embedding
+
+
+def get_vectorstore():
+    global vectorstore
+    if vectorstore is None:
+        vectorstore = Chroma(
+            persist_directory=PERSIST_DIRECTORY,
+            embedding_function=get_embedding(),
+        )
+    return vectorstore
+
+
+def get_retriever():
+    global retriever
+    if retriever is None:
+        retriever = get_vectorstore().as_retriever(search_kwargs={"k": 4})
+    return retriever
 
 
 def add_pdf_to_vectorstore(file_bytes: bytes, filename: str) -> int:
@@ -50,8 +77,9 @@ def add_pdf_to_vectorstore(file_bytes: bytes, filename: str) -> int:
     if not texts:
         return 0
 
-    vectorstore.add_texts(texts=texts, metadatas=metadatas)
-    vectorstore.persist()
+    store = get_vectorstore()
+    store.add_texts(texts=texts, metadatas=metadatas)
+    store.persist()
     logger.info(f"[PDF ingest] {filename} -> pages: {len(pages_text)}, chunks: {len(texts)}")
     return len(texts)
 
@@ -63,9 +91,9 @@ def delete_pdfs(file_names: List[str]) -> int:
     deleted = 0
     for name in file_names:
         try:
-            vectorstore.delete(where={"source": name})
+            get_vectorstore().delete(where={"source": name})
             deleted += 1
         except Exception as e:
             logger.error(f"Failed to delete vectors for {name}: {e}", exc_info=True)
-    vectorstore.persist()
+    get_vectorstore().persist()
     return deleted
