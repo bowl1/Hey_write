@@ -1,6 +1,9 @@
 import json
 import os
 import shutil
+import tempfile
+
+os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
 
 from dotenv import load_dotenv
 from langchain.docstore.document import Document
@@ -13,6 +16,7 @@ load_dotenv()
 TEMPLATE_DIR = os.getenv("TEMPLATE_DIR", "./templates")
 DB_DIR = os.getenv("CHROMA_DB_DIR", "./chroma_db")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+OPENAI_EMBEDDING_DIM = 1536
 
 REWRITE_PROMPT = """
 You are generating example user requests.
@@ -37,12 +41,17 @@ Return ONLY the sentence.
 """
 
 rewrite_llm = None
-if DEEPSEEK_API_KEY:
-    rewrite_llm = ChatDeepSeek(
-        model="deepseek-chat",
-        temperature=0,
-        api_key=DEEPSEEK_API_KEY,
-    )
+
+
+def get_rewrite_llm():
+    global rewrite_llm
+    if rewrite_llm is None and DEEPSEEK_API_KEY:
+        rewrite_llm = ChatDeepSeek(
+            model="deepseek-chat",
+            temperature=0,
+            api_key=DEEPSEEK_API_KEY,
+        )
+    return rewrite_llm
 
 
 def _has_vectors(db_dir: str) -> bool:
@@ -66,10 +75,9 @@ def _has_vectors(db_dir: str) -> bool:
         # 新增：维度检查
         sample = client._collection.get(include=["embeddings"], limit=1)
         db_dim = len(sample["embeddings"][0])
-        query_dim = len(embedding.embed_query("dimension check"))
 
-        if db_dim != query_dim:
-            print(f"Embedding dimension mismatch: db={db_dim}, query={query_dim}")
+        if db_dim != OPENAI_EMBEDDING_DIM:
+            print(f"Embedding dimension mismatch: db={db_dim}, expected={OPENAI_EMBEDDING_DIM}")
             return False
 
         return True
@@ -105,8 +113,9 @@ def _build_description(data: dict, filename: str) -> str:
     preview = (data.get("content") or "")[:400]
 
     generated_description = ""
-    if rewrite_llm:
-        response = rewrite_llm.invoke(
+    active_rewrite_llm = get_rewrite_llm()
+    if active_rewrite_llm:
+        response = active_rewrite_llm.invoke(
             REWRITE_PROMPT.format(
                 title=title,
                 tags=tags_text,
@@ -135,9 +144,6 @@ def build_if_missing() -> None:
         return
 
     print("Building vector database from templates...")
-    if os.path.isdir(DB_DIR):
-        shutil.rmtree(DB_DIR)
-
     openai_api_key = os.getenv("OPENAI_API_KEY")
     if not openai_api_key:
         raise ValueError("OPENAI_API_KEY is required for text-embedding-3-small")
@@ -179,7 +185,17 @@ def build_if_missing() -> None:
     if not docs:
         raise ValueError(f"No templates found in {TEMPLATE_DIR}")
 
-    Chroma.from_documents(docs, embedding, persist_directory=DB_DIR)
+    parent_dir = os.path.dirname(os.path.abspath(DB_DIR)) or "."
+    tmp_dir = tempfile.mkdtemp(prefix="chroma_build_", dir=parent_dir)
+    try:
+        Chroma.from_documents(docs, embedding, persist_directory=tmp_dir)
+        if os.path.isdir(DB_DIR):
+            shutil.rmtree(DB_DIR)
+        shutil.move(tmp_dir, DB_DIR)
+    except Exception:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise
+
     print("Vector DB built successfully")
     
 if __name__ == "__main__":

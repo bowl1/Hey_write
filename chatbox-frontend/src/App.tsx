@@ -3,6 +3,7 @@ import {
   PageContainer,
   ChatBox,
   Title,
+  Subtitle,
   IntentTextarea,
   Selectors,
   ResponseControls,
@@ -119,6 +120,7 @@ const Home: React.FC = () => {
     <PageContainer className="page-home">
       <ChatBox>
         <Title>Hey Write!</Title>
+        <Subtitle>Tell me what you'd like to say. I'll help you say it well.</Subtitle>
 
         <IntentTextarea
           rows={5}
@@ -182,7 +184,7 @@ const Home: React.FC = () => {
       </ChatBox>
 
       <HistoryPanel>
-        <h2>🕒 Conversation History</h2>
+        <h2>Conversation History</h2>
         {history.map((msg, index) => (
           <Message key={index} className={msg.role} role={msg.role}>
             <strong>{msg.role === "user" ? "You" : "HeyWrite"}:</strong>

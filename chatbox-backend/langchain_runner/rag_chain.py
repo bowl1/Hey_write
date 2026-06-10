@@ -14,33 +14,7 @@ logger = logging.getLogger(__name__)
 
 # 加载环境变量
 load_dotenv()
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-print("OPENAI_API_KEY loaded?", bool(os.getenv("OPENAI_API_KEY")))
-print("DEEPSEEK_API_KEY loaded?", bool(os.getenv("DEEPSEEK_API_KEY")))
-
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY is required for text-embedding-3-small")
-
-# 初始化嵌入模型
-embedding = OpenAIEmbeddings(
-    model="text-embedding-3-small",
-    api_key=OPENAI_API_KEY,
-)
-
-
-# 初始化 Chroma 向量库（假设已经预先插入模板内容）
-try:
-    persist_directory = os.getenv("CHROMA_DB_DIR", "./chroma_db")
-    vectorstore = Chroma(
-        persist_directory=persist_directory, embedding_function=embedding
-    )
-    logger.info("成功加载 Chroma 向量库")
-except Exception as e:
-    logger.error(f" 加载 Chroma 向量库失败: {e}")
-    raise
 
 SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.65"))
 
@@ -97,16 +71,57 @@ Changes:
 """
 )
 
-# 初始化 DeepSeek 模型
-try:
-    llm = ChatDeepSeek(model="deepseek-chat", temperature=0.7, api_key=DEEPSEEK_API_KEY)
-    logger.info("DeepSeek 模型初始化成功")
-except Exception as e:
-    logger.error(f" DeepSeek 模型初始化失败: {e}")
-    raise
+embedding = None
+vectorstore = None
+llm = None
+llm_chain = None
 
-# 构造 LLMChain
-llm_chain = LLMChain(llm=llm, prompt=prompt)
+
+def get_embedding():
+    global embedding
+    if embedding is None:
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            raise ValueError("OPENAI_API_KEY is required for text-embedding-3-small")
+        embedding = OpenAIEmbeddings(
+            model="text-embedding-3-small",
+            api_key=openai_api_key,
+        )
+    return embedding
+
+
+def get_vectorstore():
+    global vectorstore
+    if vectorstore is None:
+        persist_directory = os.getenv("CHROMA_DB_DIR", "./chroma_db")
+        vectorstore = Chroma(
+            persist_directory=persist_directory,
+            embedding_function=get_embedding(),
+        )
+        logger.info("成功加载 Chroma 向量库")
+    return vectorstore
+
+
+def get_llm():
+    global llm
+    if llm is None:
+        deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+        if not deepseek_api_key:
+            raise ValueError("DEEPSEEK_API_KEY is required for deepseek-chat")
+        llm = ChatDeepSeek(
+            model="deepseek-chat",
+            temperature=0.7,
+            api_key=deepseek_api_key,
+        )
+        logger.info("DeepSeek 模型初始化成功")
+    return llm
+
+
+def get_llm_chain():
+    global llm_chain
+    if llm_chain is None:
+        llm_chain = LLMChain(llm=get_llm(), prompt=prompt)
+    return llm_chain
 
 # 主函数
 def generate_with_template(
@@ -117,7 +132,7 @@ def generate_with_template(
             return "please provide a valid intent"
 
         logger.info(f"searching intent: {intent}")
-        results = vectorstore.similarity_search_with_score(intent, k=3)
+        results = get_vectorstore().similarity_search_with_score(intent, k=3)
 
         if not results:
             logger.warning("did not find any template matched, please try the wild mode")
@@ -147,7 +162,7 @@ def generate_with_template(
                     previous = msg.content
                     break
 
-        result = llm_chain.run(
+        result = get_llm_chain().run(
             {
                 "intent": intent,
                 "style": style or "formal",

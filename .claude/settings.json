@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx playwright *)",
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)"
+    ]
+  }
+}

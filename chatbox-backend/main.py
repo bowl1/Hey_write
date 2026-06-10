@@ -1,18 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
 import os
-from langchain_runner.build_vectorstore import build_if_missing
 from dotenv import load_dotenv
 import logging
-import uvicorn
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 load_dotenv()
-build_if_missing()
-from langchain_runner.rag_chain import generate_with_template
 
 app = FastAPI()
 
@@ -64,13 +60,6 @@ async def generate_text(body: RequestBody):
     for msg in body.history:
         messages.append({"role": msg.role, "content": msg.content})
     messages.append({"role": "user", "content": current_user_prompt})
-    
-    for i, msg in enumerate(body.history):
-        logger.info(f"History[{i}] - role: {msg.role}, type: {type(msg)}, content type: {type(msg.content)}, content: {msg.content}")
-    
-    for msg in body.history:
-     print(f"role={msg.role}, type(content)={type(msg.content)}, content={msg.content}")
-
     headers = {
         "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
         "Content-Type": "application/json",
@@ -95,8 +84,16 @@ async def generate_text(body: RequestBody):
 
 @app.post("/write_with_template")
 def write_with_template(body: RequestBody):
-    result = generate_with_template(
-        body.intent, body.style, body.language, body.history
-    )
-    return {"reply": result}
+    try:
+        from langchain_runner.build_vectorstore import build_if_missing
+        from langchain_runner.rag_chain import generate_with_template
 
+        build_if_missing()
+        result = generate_with_template(
+            body.intent, body.style, body.language, body.history
+        )
+    except Exception as e:
+        logger.error("Template generation failed during initialization or generation", exc_info=True)
+        raise HTTPException(status_code=503, detail=f"Template generation unavailable: {e}")
+
+    return {"reply": result}
