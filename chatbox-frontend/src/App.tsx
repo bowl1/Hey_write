@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   PageContainer,
   ChatBox,
@@ -17,6 +17,23 @@ import {
   ResponseText,
   HistoryPanel,
   Message,
+  SideStack,
+  Panel,
+  TemplateList,
+  TemplateItem,
+  TemplateRow,
+  TemplateTagRow,
+  TemplateTag,
+  TemplateForm,
+  TemplateInput,
+  TemplateTextarea,
+  TemplateMetaBox,
+  DropdownHeader,
+  TemplateModalBackdrop,
+  TemplateModal,
+  TemplateModalHeader,
+  TemplateModalBody,
+  ModalCloseButton,
 } from "./App-style";
 
 import {
@@ -24,6 +41,34 @@ import {
   languageOptions,
   CustomSelect,
 } from "./components/option";
+
+type Template = {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  tags: string[];
+  language: string;
+  structure: string[];
+  content: string;
+  enabled: boolean;
+};
+
+type TemplateMeta = {
+  used_template?: boolean;
+  selected_template?: string;
+  selected_template_id?: string;
+  match_score?: number;
+  reason?: string;
+};
+
+const emptyTemplateForm = {
+  title: "",
+  category: "general",
+  description: "",
+  tags: "",
+  content: "",
+};
 
 const Home: React.FC = () => {
   const [intent, setIntent] = useState<string>("");
@@ -36,32 +81,68 @@ const Home: React.FC = () => {
   const [history, setHistory] = useState<
     { role: "user" | "assistant"; content: string }[]
   >([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templateMeta, setTemplateMeta] = useState<TemplateMeta | null>(null);
+  const [templateForm, setTemplateForm] = useState(emptyTemplateForm);
+  const [templateMessage, setTemplateMessage] = useState<string>("");
+  const [templateLibraryOpen, setTemplateLibraryOpen] =
+    useState<boolean>(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
+    null
+  );
 
   const BASE_URL =
     process.env.NODE_ENV === "development"
       ? "http://localhost:8000"
-      : process.env.REACT_APP_API_URL;
+      : process.env.REACT_APP_API_URL || "";
+
+  const loadTemplates = async () => {
+    if (!BASE_URL && process.env.NODE_ENV !== "development") return;
+    try {
+      const res = await fetch(`${BASE_URL}/templates`);
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const data = await res.json();
+      setTemplates(data.templates || []);
+    } catch (error) {
+      console.error("Failed to load templates:", error);
+    }
+  };
+
+  useEffect(() => {
+    loadTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async () => {
     if (!intent.trim()) return;
     setLoading(true);
     setLastResponse(response);
     setResponse("");
+    setTemplateMeta(null);
 
-    const res = await fetch(`${BASE_URL}/write`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ intent, style, language, history }),
-    });
+    try {
+      const res = await fetch(`${BASE_URL}/write`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intent, style, language, history }),
+      });
 
-    const data = await res.json();
-    setResponse(data.reply);
-    setHistory((prev) => [
-      ...prev,
-      { role: "user", content: intent },
-      { role: "assistant", content: data.reply },
-    ]);
-    setLoading(false);
+      if (!res.ok)
+        throw new Error(`Server returned ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+      setResponse(data.reply);
+      setHistory((prev) => [
+        ...prev,
+        { role: "user", content: intent },
+        { role: "assistant", content: data.reply },
+      ]);
+    } catch (error: any) {
+      console.error("Error in handleSubmit:", error);
+      alert(`Generation failed: ${error.message}`);
+      setResponse("");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmitWithTemplate = async () => {
@@ -69,6 +150,7 @@ const Home: React.FC = () => {
     setLoading(true);
     setLastResponse(response);
     setResponse("");
+    setTemplateMeta(null);
 
     try {
       const res = await fetch(`${BASE_URL}/write_with_template`, {
@@ -82,6 +164,7 @@ const Home: React.FC = () => {
       const data = await res.json();
 
       setResponse(data.reply);
+      setTemplateMeta(data.template_meta || null);
       setHistory((prev) => [
         ...prev,
         { role: "user", content: intent },
@@ -116,8 +199,143 @@ const Home: React.FC = () => {
     }
   };
 
+  const handleCreateTemplate = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+    if (!templateForm.title.trim() || !templateForm.content.trim()) {
+      setTemplateMessage("Template title and content are required.");
+      return;
+    }
+
+    setTemplateMessage("Saving template...");
+    try {
+      const res = await fetch(`${BASE_URL}/templates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: templateForm.title,
+          category: templateForm.category,
+          description: templateForm.description,
+          tags: templateForm.tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+          style,
+          language,
+          content: templateForm.content,
+        }),
+      });
+
+      if (!res.ok)
+        throw new Error(`Server returned ${res.status}: ${await res.text()}`);
+
+      const data = await res.json();
+      setTemplateForm(emptyTemplateForm);
+      setTemplateMessage(
+        data.index_status?.ok
+          ? "Template saved and indexed."
+          : `Template saved. Index update failed: ${
+              data.index_status?.error || "unknown error"
+            }`
+      );
+      await loadTemplates();
+    } catch (error: any) {
+      console.error("Template save failed:", error);
+      setTemplateMessage(`Template save failed: ${error.message}`);
+    }
+  };
+
   return (
     <PageContainer className="page-home">
+      <SideStack>
+        <Panel>
+          <DropdownHeader
+            type="button"
+            onClick={() => setTemplateLibraryOpen((open) => !open)}
+            aria-expanded={templateLibraryOpen}
+          >
+            <h2>Template Library</h2>
+            <span>
+              {templates.length} {templateLibraryOpen ? "▲" : "▼"}
+            </span>
+          </DropdownHeader>
+          {templateLibraryOpen && (
+            <TemplateList>
+              {templates.length === 0 && (
+                <TemplateItem>
+                  <h3>No templates loaded</h3>
+                  <p>Create one below or start the backend to load templates.</p>
+                </TemplateItem>
+              )}
+              {templates.map((template) => (
+                <TemplateItem key={template.id}>
+                  <TemplateRow
+                    type="button"
+                    onClick={() => setSelectedTemplate(template)}
+                  >
+                    <h3>{template.title}</h3>
+                    <span>{template.category}</span>
+                  </TemplateRow>
+                </TemplateItem>
+              ))}
+            </TemplateList>
+          )}
+        </Panel>
+
+        <Panel>
+          <h2>Create Template</h2>
+          <TemplateForm onSubmit={handleCreateTemplate}>
+            <TemplateInput
+              placeholder="Template title"
+              value={templateForm.title}
+              onChange={(e) =>
+                setTemplateForm((prev) => ({ ...prev, title: e.target.value }))
+              }
+            />
+            <TemplateInput
+              placeholder="Category"
+              value={templateForm.category}
+              onChange={(e) =>
+                setTemplateForm((prev) => ({
+                  ...prev,
+                  category: e.target.value,
+                }))
+              }
+            />
+            <TemplateInput
+              placeholder="Description"
+              value={templateForm.description}
+              onChange={(e) =>
+                setTemplateForm((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
+            />
+            <TemplateInput
+              placeholder="Tags, separated by commas"
+              value={templateForm.tags}
+              onChange={(e) =>
+                setTemplateForm((prev) => ({ ...prev, tags: e.target.value }))
+              }
+            />
+            <TemplateTextarea
+              placeholder="Paste the template body here"
+              value={templateForm.content}
+              onChange={(e) =>
+                setTemplateForm((prev) => ({
+                  ...prev,
+                  content: e.target.value,
+                }))
+              }
+            />
+            <GenerateButton type="submit">Save Template</GenerateButton>
+            {templateMessage && <p>{templateMessage}</p>}
+          </TemplateForm>
+        </Panel>
+      </SideStack>
+
       <ChatBox>
         <Title>Hey Write!</Title>
         <Subtitle>Tell me what you'd like to say. I'll help you say it well.</Subtitle>
@@ -178,6 +396,25 @@ const Home: React.FC = () => {
             <CopyButton onClick={handleCopy}>
               {copied ? "Copied!" : "Copy"}
             </CopyButton>
+            {templateMeta && (
+              <TemplateMetaBox>
+                <strong>Template source</strong>
+                {templateMeta.used_template ? (
+                  <>
+                    Used {templateMeta.selected_template || "a matched template"}
+                    {typeof templateMeta.match_score === "number"
+                      ? `, distance ${templateMeta.match_score.toFixed(2)}`
+                      : ""}
+                    . {templateMeta.reason}
+                  </>
+                ) : (
+                  <>
+                    No template used.{" "}
+                    {templateMeta.reason || "The agent fell back to wild mode."}
+                  </>
+                )}
+              </TemplateMetaBox>
+            )}
             <ResponseText data-testid="main-reply">{response}</ResponseText>
           </ResponseBox>
         )}
@@ -192,6 +429,36 @@ const Home: React.FC = () => {
           </Message>
         ))}
       </HistoryPanel>
+
+      {selectedTemplate && (
+        <TemplateModalBackdrop onClick={() => setSelectedTemplate(null)}>
+          <TemplateModal onClick={(event) => event.stopPropagation()}>
+            <TemplateModalHeader>
+              <div>
+                <h3>{selectedTemplate.title}</h3>
+                <p>
+                  {selectedTemplate.category} · {selectedTemplate.language}
+                </p>
+              </div>
+              <ModalCloseButton
+                type="button"
+                onClick={() => setSelectedTemplate(null)}
+              >
+                Close
+              </ModalCloseButton>
+            </TemplateModalHeader>
+            <TemplateModalBody>
+              <p>{selectedTemplate.description}</p>
+              <TemplateTagRow>
+                {(selectedTemplate.tags || []).map((tag) => (
+                  <TemplateTag key={tag}>{tag}</TemplateTag>
+                ))}
+              </TemplateTagRow>
+              <pre>{selectedTemplate.content}</pre>
+            </TemplateModalBody>
+          </TemplateModal>
+        </TemplateModalBackdrop>
+      )}
     </PageContainer>
   );
 };

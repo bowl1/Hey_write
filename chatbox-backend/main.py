@@ -5,6 +5,7 @@ import requests
 import os
 from dotenv import load_dotenv
 import logging
+from template_store import list_templates, get_template, save_template
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,6 +31,17 @@ class RequestBody(BaseModel):
     style: str = "Formal"
     language: str = "English"
     history: list[ChatMessage] = []  # 对话历史
+
+
+class TemplateCreateRequest(BaseModel):
+    title: str
+    category: str = "general"
+    description: str = ""
+    tags: list[str] = []
+    style: str = "Formal"
+    language: str = "English"
+    use_cases: list[str] = []
+    content: str
 
 
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
@@ -96,4 +108,32 @@ def write_with_template(body: RequestBody):
         logger.error("Template generation failed during initialization or generation", exc_info=True)
         raise HTTPException(status_code=503, detail=f"Template generation unavailable: {e}")
 
-    return {"reply": result}
+    return result
+
+
+@app.get("/templates")
+def templates():
+    return {"templates": list_templates()}
+
+
+@app.get("/templates/{template_id}")
+def template_detail(template_id: str):
+    template = get_template(template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+
+@app.post("/templates")
+def create_template(body: TemplateCreateRequest):
+    template_data = body.model_dump() if hasattr(body, "model_dump") else body.dict()
+    template = save_template(template_data)
+    index_status = {"ok": True, "error": None}
+    try:
+        from langchain_runner.build_vectorstore import build_if_missing
+
+        build_if_missing(force=True)
+    except Exception as e:
+        logger.error("Template saved but reindex failed", exc_info=True)
+        index_status = {"ok": False, "error": str(e)}
+    return {"template": template, "index_status": index_status}

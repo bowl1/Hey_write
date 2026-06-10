@@ -5,11 +5,12 @@ import tempfile
 
 os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
 
-from dotenv import load_dotenv
 from langchain.docstore.document import Document
 from langchain_community.vectorstores import Chroma
 from langchain_deepseek import ChatDeepSeek
 from langchain_openai import OpenAIEmbeddings
+from dotenv import load_dotenv
+from template_store import list_templates
 
 load_dotenv()
 
@@ -138,8 +139,8 @@ def _build_description(data: dict, filename: str) -> str:
     return generated_description
 
 
-def build_if_missing() -> None:
-    if _has_vectors(DB_DIR):
+def build_if_missing(force: bool = False) -> None:
+    if not force and _has_vectors(DB_DIR):
         print("Vector DB already exists")
         return
 
@@ -154,33 +155,33 @@ def build_if_missing() -> None:
     )
 
     docs = []
-    for filename in os.listdir(TEMPLATE_DIR):
-        if not filename.endswith(".json") or filename.endswith(".embedding.json"):
+    for template in list_templates():
+        if not template.get("enabled", True):
             continue
-        path = os.path.join(TEMPLATE_DIR, filename)
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-            # 1. 取模板正文
-            content = data.get("content", "") or json.dumps(data, ensure_ascii=False)
-
-            # 2. 生成用户query描述（多行）
-            description = _build_description(data, filename)
-
-            queries = [q.strip() for q in description.split("\n") if q.strip()]
-
-            # 3. 每个query写入一个向量
-            for q in queries:
-                docs.append(
-                    Document(
-                        page_content=q,
-                        metadata={
-                            "source": filename,
-                            "template_content": content,
-                            "description": description,
-                        },
-                    )
-                )
+        content = template.get("content", "")
+        description = _build_description(template, f"{template['id']}.json")
+        search_text = "\n".join(
+            [
+                f"Title: {template.get('title', '')}",
+                f"Category: {template.get('category', '')}",
+                f"Description: {description}",
+                "Tags: " + ", ".join(template.get("tags", [])),
+                "Use cases:",
+                *[f"- {case}" for case in template.get("use_cases", [])],
+            ]
+        )
+        docs.append(
+            Document(
+                page_content=search_text,
+                metadata={
+                    "template_id": template["id"],
+                    "template_title": template.get("title", ""),
+                    "template_category": template.get("category", ""),
+                    "template_content": content,
+                    "description": description,
+                },
+            )
+        )
 
     if not docs:
         raise ValueError(f"No templates found in {TEMPLATE_DIR}")

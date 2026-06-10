@@ -126,24 +126,38 @@ def get_llm_chain():
 # 主函数
 def generate_with_template(
     intent: str, style: str, language: str, history: list[dict] = None
-) -> str:
+) -> dict:
     try:
         if not intent.strip():
-            return "please provide a valid intent"
+            return {"reply": "please provide a valid intent", "template_meta": None}
 
         logger.info(f"searching intent: {intent}")
         results = get_vectorstore().similarity_search_with_score(intent, k=3)
 
         if not results:
             logger.warning("did not find any template matched, please try the wild mode")
-            return "did not find any template matched, please try the wild mode"
+            return {
+                "reply": "did not find any template matched, please try the wild mode",
+                "template_meta": {
+                    "used_template": False,
+                    "reason": "No templates were returned by retrieval.",
+                },
+            }
 
         top_doc, top_dist = results[0]
         logger.info(f"[template-match] dist={top_dist:.4f}")
 
         if top_dist > SIMILARITY_THRESHOLD:
             logger.warning("distance too far -> wild mode")
-            return "did not find any template matched, please try the wild mode"
+            return {
+                "reply": "did not find any template matched, please try the wild mode",
+                "template_meta": {
+                    "used_template": False,
+                    "match_score": top_dist,
+                    "selected_template": top_doc.metadata.get("template_title", ""),
+                    "reason": f"Best template distance {top_dist:.2f} exceeded threshold {SIMILARITY_THRESHOLD:.2f}.",
+                },
+            }
 
         docs = [doc for doc, _ in results]
         logger.info(f"found {len(docs)} templates")
@@ -173,8 +187,17 @@ def generate_with_template(
         )
 
         logger.info("generate content successfully")
-        return result.strip()
+        return {
+            "reply": result.strip(),
+            "template_meta": {
+                "used_template": True,
+                "match_score": top_dist,
+                "selected_template": top_doc.metadata.get("template_title", ""),
+                "selected_template_id": top_doc.metadata.get("template_id", ""),
+                "reason": f"Selected because it was the closest template match with distance {top_dist:.2f}.",
+            },
+        }
 
     except Exception as e:
         logger.error(f"failed to generate content: {e}", exc_info=True)
-        return "failed to generate content :" + str(e)
+        return {"reply": "failed to generate content :" + str(e), "template_meta": None}

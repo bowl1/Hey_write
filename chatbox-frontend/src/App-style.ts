@@ -20,14 +20,22 @@ const borderFocus = "#c45c2b";
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 export const PageContainer = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: 300px minmax(560px, 660px) 300px;
   justify-content: center;
   align-items: flex-start;
   min-height: 100vh;
   padding: 3.5rem 2rem;
   gap: 1.75rem;
 
+  @media (max-width: 1280px) {
+    grid-template-columns: 260px minmax(500px, 1fr) 260px;
+    gap: 1rem;
+    padding: 2.5rem 1rem;
+  }
+
   @media (max-width: 900px) {
+    display: flex;
     flex-direction: column;
     align-items: center;
     padding: 1.75rem 1rem;
@@ -45,7 +53,6 @@ export const ChatBox = styled.div`
     0 1px 3px rgba(60, 40, 20, 0.06),
     0 8px 32px rgba(60, 40, 20, 0.09);
   border: 1px solid ${border};
-  max-width: 660px;
   width: 100%;
   animation: ${fadeUp} 0.4s ease both;
 
@@ -85,6 +92,7 @@ export const Subtitle = styled.p`
 
 export const IntentTextarea = styled.textarea`
   width: 100%;
+  box-sizing: border-box;
   padding: 1rem 1.2rem;
   font-size: 0.975rem;
   font-family: "Lora", Georgia, serif;
@@ -334,6 +342,28 @@ export const ResponseText = styled.div`
   }
 `;
 
+export const TemplateMetaBox = styled.div`
+  clear: both;
+  margin-bottom: 0.875rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid ${border};
+  border-left: 3px solid ${clay};
+  background: #fffaf3;
+  font-family: "Inter", sans-serif;
+  font-size: 0.8rem;
+  color: ${body};
+  line-height: 1.5;
+
+  strong {
+    display: block;
+    font-size: 0.68rem;
+    color: ${muted};
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 0.25rem;
+  }
+`;
+
 // ─── History Panel ────────────────────────────────────────────────────────────
 
 export const HistoryPanel = styled.div`
@@ -352,6 +382,10 @@ export const HistoryPanel = styled.div`
   top: 3rem;
   animation: ${fadeUp} 0.4s ease 0.1s both;
 
+  @media (max-width: 1280px) {
+    width: 260px;
+  }
+
   h2 {
     font-size: 0.7rem;
     font-weight: 600;
@@ -367,6 +401,298 @@ export const HistoryPanel = styled.div`
     max-width: 660px;
     position: static;
     padding: 1.25rem;
+  }
+`;
+
+export const SideStack = styled.div`
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  @media (max-width: 1280px) {
+    width: 260px;
+  }
+
+  @media (max-width: 900px) {
+    width: 100%;
+    max-width: 660px;
+  }
+`;
+
+export const Panel = styled.div`
+  background: ${paper};
+  padding: 1.5rem;
+  border-radius: 4px;
+  box-shadow:
+    0 1px 3px rgba(60, 40, 20, 0.05),
+    0 6px 20px rgba(60, 40, 20, 0.07);
+  border: 1px solid ${border};
+  box-sizing: border-box;
+  animation: ${fadeUp} 0.4s ease 0.1s both;
+
+  h2 {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: ${muted};
+    margin: 0 0 1.1rem;
+    font-family: "Inter", sans-serif;
+  }
+`;
+
+export const DropdownHeader = styled.button`
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  color: ${muted};
+  font-family: "Inter", sans-serif;
+
+  h2 {
+    margin: 0;
+  }
+
+  span {
+    font-size: 0.75rem;
+    color: ${muted};
+  }
+`;
+
+export const TemplateList = styled.div`
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.25rem;
+`;
+
+export const TemplateItem = styled.div`
+  border: 1px solid ${border};
+  background: ${linen};
+  border-radius: 2px;
+  overflow: hidden;
+`;
+
+export const TemplateRow = styled.button`
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0.55rem 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: left;
+  cursor: pointer;
+  color: ${body};
+  font-family: "Inter", sans-serif;
+
+  h3 {
+    margin: 0;
+    color: ${ink};
+    font-size: 0.82rem;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  span {
+    flex-shrink: 0;
+    color: ${muted};
+    font-size: 0.68rem;
+  }
+`;
+
+export const TemplateDetail = styled.div`
+  padding: 0.7rem;
+  border-top: 1px solid ${border};
+  background: ${paper};
+
+  p {
+    margin: 0.25rem 0;
+    color: ${body};
+    font-size: 0.76rem;
+    line-height: 1.45;
+  }
+
+  pre {
+    margin: 0.55rem 0 0;
+    max-height: 160px;
+    overflow: auto;
+    white-space: pre-wrap;
+    font-family: "Lora", Georgia, serif;
+    font-size: 0.74rem;
+    line-height: 1.5;
+    color: ${body};
+    background: ${linen};
+    border: 1px solid ${border};
+    padding: 0.6rem;
+    border-radius: 2px;
+  }
+`;
+
+export const TemplateModalBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(28, 24, 21, 0.36);
+`;
+
+export const TemplateModal = styled.div`
+  width: min(760px, 100%);
+  max-height: min(78vh, 760px);
+  overflow: hidden;
+  background: ${paper};
+  border: 1px solid ${border};
+  border-radius: 4px;
+  box-shadow:
+    0 8px 28px rgba(28, 24, 21, 0.18),
+    0 24px 70px rgba(28, 24, 21, 0.22);
+  display: flex;
+  flex-direction: column;
+`;
+
+export const TemplateModalHeader = styled.div`
+  padding: 1.25rem 1.4rem 1rem;
+  border-bottom: 1px solid ${border};
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+
+  h3 {
+    margin: 0 0 0.35rem;
+    color: ${ink};
+    font-family: "Inter", sans-serif;
+    font-size: 1rem;
+  }
+
+  p {
+    margin: 0;
+    color: ${muted};
+    font-family: "Inter", sans-serif;
+    font-size: 0.78rem;
+  }
+`;
+
+export const TemplateModalBody = styled.div`
+  padding: 1.2rem 1.4rem 1.4rem;
+  overflow: auto;
+
+  p {
+    margin: 0 0 0.8rem;
+    color: ${body};
+    font-family: "Inter", sans-serif;
+    font-size: 0.84rem;
+    line-height: 1.55;
+  }
+
+  pre {
+    margin: 0.9rem 0 0;
+    white-space: pre-wrap;
+    font-family: "Lora", Georgia, serif;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: ${body};
+    background: ${linen};
+    border: 1px solid ${border};
+    padding: 1rem;
+    border-radius: 2px;
+  }
+`;
+
+export const ModalCloseButton = styled.button`
+  flex-shrink: 0;
+  border: 1px solid ${border};
+  background: transparent;
+  color: ${muted};
+  border-radius: 2px;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+  font-size: 0.76rem;
+
+  &:hover {
+    background: #f0e9de;
+    color: ${body};
+  }
+`;
+
+export const TemplateTagRow = styled.div`
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.45rem;
+`;
+
+export const TemplateTag = styled.span`
+  padding: 0.15rem 0.4rem;
+  border: 1px solid ${border};
+  background: ${paper};
+  color: ${muted};
+  font-size: 0.68rem;
+  border-radius: 2px;
+`;
+
+export const TemplateForm = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+`;
+
+export const TemplateInput = styled.input`
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid ${border};
+  background: ${linen};
+  color: ${body};
+  border-radius: 2px;
+  font-family: "Inter", sans-serif;
+  font-size: 0.82rem;
+  outline: none;
+
+  &:focus {
+    border-color: ${clay};
+    background: #fffefb;
+  }
+`;
+
+export const TemplateTextarea = styled.textarea`
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 120px;
+  resize: vertical;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid ${border};
+  background: ${linen};
+  color: ${body};
+  border-radius: 2px;
+  font-family: "Lora", Georgia, serif;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  outline: none;
+
+  &:focus {
+    border-color: ${clay};
+    background: #fffefb;
   }
 `;
 

@@ -2,13 +2,19 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import Home from "./App";
 
 test("does not submit when input is empty", () => {
-  global.fetch = jest.fn(); // mock fetch
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ templates: [] }),
+  });
 
   render(<Home />);
   const generateButton = screen.getByText("Generate with Template");
   fireEvent.click(generateButton);
 
-  expect(global.fetch).not.toHaveBeenCalled();
+  expect(global.fetch).not.toHaveBeenCalledWith(
+    expect.stringContaining("/write_with_template"),
+    expect.anything()
+  );
 });
 
 test("shows response after clicking generate button", async () => {
