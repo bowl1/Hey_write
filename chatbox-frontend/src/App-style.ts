@@ -222,7 +222,7 @@ export const ResetButton = styled(Button)``;
 
 export const GenerateButtons = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 0.875rem;
   margin-top: 1.75rem;
 

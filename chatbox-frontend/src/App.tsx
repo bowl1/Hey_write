@@ -72,6 +72,9 @@ const emptyTemplateForm = {
 };
 
 const splitResponseSections = (text: string) => {
+  if (!text) {
+    return { draft: "", changes: "" };
+  }
   const match = text.match(/(?:^|\n)Changes:\s*/i);
   if (!match || match.index === undefined) {
     return { draft: text, changes: "" };
@@ -103,6 +106,7 @@ const Home: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
     null
   );
+  const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
 
   const BASE_URL =
     process.env.NODE_ENV === "development"
@@ -144,11 +148,12 @@ const Home: React.FC = () => {
       if (!res.ok)
         throw new Error(`Server returned ${res.status}: ${await res.text()}`);
       const data = await res.json();
-      setResponse(data.reply);
+      setResponse(data.reply || "");
+      setActiveTemplateId(null);
       setHistory((prev) => [
         ...prev,
         { role: "user", content: intent },
-        { role: "assistant", content: data.reply },
+        { role: "assistant", content: data.reply || "" },
       ]);
     } catch (error: any) {
       console.error("Error in handleSubmit:", error);
@@ -165,6 +170,7 @@ const Home: React.FC = () => {
     setLastResponse(response);
     setResponse("");
     setTemplateMeta(null);
+    setActiveTemplateId(null);
 
     try {
       const res = await fetch(`${BASE_URL}/write_with_template`, {
@@ -177,17 +183,64 @@ const Home: React.FC = () => {
         throw new Error(`Server returned ${res.status}: ${await res.text()}`);
       const data = await res.json();
 
-      setResponse(data.reply);
+      setResponse(data.reply || "");
       setTemplateMeta(data.template_meta || null);
+      setActiveTemplateId(data.template_meta?.selected_template_id || null);
       setHistory((prev) => [
         ...prev,
         { role: "user", content: intent },
-        { role: "assistant", content: data.reply },
+        { role: "assistant", content: data.reply || "" },
       ]);
     } catch (error: any) {
       console.error("Error in handleSubmitWithTemplate:", error);
       alert(`Generation failed: ${error.message}`);
       setResponse("");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleContinueEditing = async () => {
+    if (!intent.trim() || !response.trim()) return;
+    const previousResponse = response;
+    const currentDraft = responseSections.draft || response;
+    setLoading(true);
+    setLastResponse(response);
+    setResponse("");
+    setTemplateMeta(null);
+
+    try {
+      const res = await fetch(`${BASE_URL}/continue_editing`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          intent,
+          style,
+          language,
+          history,
+          current_draft: currentDraft,
+          active_template_id: activeTemplateId,
+        }),
+      });
+
+      if (!res.ok)
+        throw new Error(`Server returned ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+
+      setResponse(data.reply || "");
+      setTemplateMeta(data.template_meta || null);
+      setActiveTemplateId(
+        data.template_meta?.selected_template_id || activeTemplateId
+      );
+      setHistory((prev) => [
+        ...prev,
+        { role: "user", content: intent },
+        { role: "assistant", content: data.reply || "" },
+      ]);
+    } catch (error: any) {
+      console.error("Error in handleContinueEditing:", error);
+      alert(`Continue editing failed: ${error.message}`);
+      setResponse(previousResponse);
     } finally {
       setLoading(false);
     }
@@ -384,6 +437,12 @@ const Home: React.FC = () => {
         <GenerateButtons>
           <GenerateButton onClick={handleSubmitWithTemplate} disabled={loading}>
             Generate with Template
+          </GenerateButton>
+          <GenerateButton
+            onClick={handleContinueEditing}
+            disabled={loading || !response}
+          >
+            Continue Editing
           </GenerateButton>
           <GenerateButton onClick={handleSubmit} disabled={loading}>
             {loading

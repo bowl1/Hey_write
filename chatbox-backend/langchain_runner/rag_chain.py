@@ -4,7 +4,7 @@ from langchain_deepseek import ChatDeepSeek
 import os
 import logging
 from dotenv import load_dotenv
-from template_store import search_templates
+from template_store import get_template, search_templates
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
@@ -168,3 +168,48 @@ def generate_with_template(
     except Exception as e:
         logger.error(f"failed to generate content: {e}", exc_info=True)
         return {"reply": "failed to generate content :" + str(e), "template_meta": None}
+
+
+def revise_current_draft(
+    intent: str,
+    style: str,
+    language: str,
+    current_draft: str,
+    active_template_id: str | None = None,
+) -> dict:
+    try:
+        if not intent.strip():
+            return {"reply": "please provide a valid edit instruction", "template_meta": None}
+        if not current_draft.strip():
+            return {"reply": "please generate a draft before continuing editing", "template_meta": None}
+
+        active_template = get_template(active_template_id) if active_template_id else None
+        context = active_template.get("content", "") if active_template else ""
+
+        result = get_llm_chain().run(
+            {
+                "intent": intent,
+                "style": style or "formal",
+                "language": language or "English",
+                "context": context,
+                "previous": current_draft,
+            }
+        )
+
+        return {
+            "reply": result.strip(),
+            "template_meta": {
+                "used_template": bool(active_template),
+                "selected_template": active_template.get("title", "") if active_template else "",
+                "selected_template_id": active_template.get("id", "") if active_template else "",
+                "reason": (
+                    "Continued editing the current draft using the active template."
+                    if active_template
+                    else "Continued editing the current draft without reselecting a template."
+                ),
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"failed to revise current draft: {e}", exc_info=True)
+        return {"reply": "failed to revise current draft :" + str(e), "template_meta": None}

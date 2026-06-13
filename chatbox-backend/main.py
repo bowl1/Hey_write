@@ -33,6 +33,11 @@ class RequestBody(BaseModel):
     history: list[ChatMessage] = []  # 对话历史
 
 
+class ContinueEditingRequest(RequestBody):
+    current_draft: str
+    active_template_id: str | None = None
+
+
 class TemplateCreateRequest(BaseModel):
     title: str
     category: str = "general"
@@ -107,6 +112,25 @@ def write_with_template(body: RequestBody):
     except Exception as e:
         logger.error("Template generation failed during initialization or generation", exc_info=True)
         raise HTTPException(status_code=503, detail=f"Template generation unavailable: {e}")
+
+    return result
+
+
+@app.post("/continue_editing")
+def continue_editing(body: ContinueEditingRequest):
+    try:
+        from langchain_runner.rag_chain import revise_current_draft
+
+        result = revise_current_draft(
+            body.intent,
+            body.style,
+            body.language,
+            body.current_draft,
+            body.active_template_id,
+        )
+    except Exception as e:
+        logger.error("Continue editing failed", exc_info=True)
+        raise HTTPException(status_code=503, detail=f"Continue editing unavailable: {e}")
 
     return result
 
