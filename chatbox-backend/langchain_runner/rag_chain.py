@@ -1,11 +1,10 @@
-from langchain_community.vectorstores import Chroma
 from langchain.prompts import PromptTemplate
-from langchain_openai import OpenAIEmbeddings
 from langchain.chains import LLMChain
 from langchain_deepseek import ChatDeepSeek
 import os
 import logging
 from dotenv import load_dotenv
+from template_store import search_templates
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
@@ -71,35 +70,8 @@ Changes:
 """
 )
 
-embedding = None
-vectorstore = None
 llm = None
 llm_chain = None
-
-
-def get_embedding():
-    global embedding
-    if embedding is None:
-        openai_api_key = os.getenv("OPENAI_API_KEY")
-        if not openai_api_key:
-            raise ValueError("OPENAI_API_KEY is required for text-embedding-3-small")
-        embedding = OpenAIEmbeddings(
-            model="text-embedding-3-small",
-            api_key=openai_api_key,
-        )
-    return embedding
-
-
-def get_vectorstore():
-    global vectorstore
-    if vectorstore is None:
-        persist_directory = os.getenv("CHROMA_DB_DIR", "./chroma_db")
-        vectorstore = Chroma(
-            persist_directory=persist_directory,
-            embedding_function=get_embedding(),
-        )
-        logger.info("成功加载 Chroma 向量库")
-    return vectorstore
 
 
 def get_llm():
@@ -132,7 +104,7 @@ def generate_with_template(
             return {"reply": "please provide a valid intent", "template_meta": None}
 
         logger.info(f"searching intent: {intent}")
-        results = get_vectorstore().similarity_search_with_score(intent, k=3)
+        results = search_templates(intent, limit=3)
 
         if not results:
             logger.warning("did not find any template matched, please try the wild mode")
@@ -144,7 +116,7 @@ def generate_with_template(
                 },
             }
 
-        top_doc, top_dist = results[0]
+        top_template, top_dist = results[0]
         logger.info(f"[template-match] dist={top_dist:.4f}")
 
         if top_dist > SIMILARITY_THRESHOLD:
@@ -154,19 +126,14 @@ def generate_with_template(
                 "template_meta": {
                     "used_template": False,
                     "match_score": top_dist,
-                    "selected_template": top_doc.metadata.get("template_title", ""),
+                    "selected_template": top_template.get("title", ""),
                     "reason": f"Best template distance {top_dist:.2f} exceeded threshold {SIMILARITY_THRESHOLD:.2f}.",
                 },
             }
 
-        docs = [doc for doc, _ in results]
-        logger.info(f"found {len(docs)} templates")
-        context = "\n\n".join(
-            [
-                doc.metadata.get("template_content", doc.page_content)
-                for doc in docs
-            ]
-        )
+        templates = [template for template, _ in results]
+        logger.info(f"found {len(templates)} templates")
+        context = "\n\n".join(template.get("content", "") for template in templates)
 
         # 提取最近一条 assistant
         previous = ""
@@ -192,8 +159,8 @@ def generate_with_template(
             "template_meta": {
                 "used_template": True,
                 "match_score": top_dist,
-                "selected_template": top_doc.metadata.get("template_title", ""),
-                "selected_template_id": top_doc.metadata.get("template_id", ""),
+                "selected_template": top_template.get("title", ""),
+                "selected_template_id": top_template.get("id", ""),
                 "reason": f"Selected because it was the closest template match with distance {top_dist:.2f}.",
             },
         }

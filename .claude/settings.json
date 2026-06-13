@@ -3,7 +3,11 @@
     "allow": [
       "Bash(npx playwright *)",
       "Read(//tmp/**)",
-      "Read(//private/tmp/**)"
+      "Read(//private/tmp/**)",
+      "Bash(pg_isready)",
+      "Bash(brew services *)",
+      "Bash(createdb heywrite *)",
+      "Bash(psql -d heywrite -c \"\\\\l heywrite\")"
     ]
   }
 }

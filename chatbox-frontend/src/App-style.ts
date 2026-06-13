@@ -302,7 +302,6 @@ export const ResponseTitle = styled.h2`
 `;
 
 export const CopyButton = styled.button`
-  float: right;
   font-family: "Inter", sans-serif;
   font-size: 0.75rem;
   font-weight: 500;
@@ -313,7 +312,6 @@ export const CopyButton = styled.button`
   color: ${muted};
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
-  margin-bottom: 0.625rem;
 
   &:hover {
     background: #f0e9de;
@@ -323,12 +321,13 @@ export const CopyButton = styled.button`
 `;
 
 export const ResponseText = styled.div`
+  display: grid;
+  gap: 0.875rem;
   font-family: "Lora", Georgia, serif;
   font-size: 0.975rem;
   line-height: 1.8;
   color: ${body};
   white-space: pre-line;
-  clear: both;
   padding: 1.25rem 1.5rem;
   background: ${linen};
   border: 1px solid ${border};
@@ -339,6 +338,39 @@ export const ResponseText = styled.div`
     font-size: 0.9rem;
     padding: 1rem 1.1rem;
     line-height: 1.7;
+  }
+`;
+
+export const ResponseTextHeader = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+`;
+
+export const ChangesBox = styled.div`
+  margin-top: 0.875rem;
+  padding: 0.85rem 1rem;
+  background: #fffaf3;
+  border: 1px solid ${border};
+  border-left: 3px solid ${muted};
+  border-radius: 2px;
+  font-family: "Inter", sans-serif;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: ${body};
+  white-space: pre-line;
+
+  strong {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.68rem;
+    color: ${muted};
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  p {
+    margin: 0;
   }
 `;
 

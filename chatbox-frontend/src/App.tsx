@@ -15,6 +15,8 @@ import {
   ResponseTitle,
   CopyButton,
   ResponseText,
+  ResponseTextHeader,
+  ChangesBox,
   HistoryPanel,
   Message,
   SideStack,
@@ -64,10 +66,21 @@ type TemplateMeta = {
 
 const emptyTemplateForm = {
   title: "",
-  category: "general",
   description: "",
   tags: "",
   content: "",
+};
+
+const splitResponseSections = (text: string) => {
+  const match = text.match(/(?:^|\n)Changes:\s*/i);
+  if (!match || match.index === undefined) {
+    return { draft: text, changes: "" };
+  }
+
+  return {
+    draft: text.slice(0, match.index).trim(),
+    changes: text.slice(match.index + match[0].length).trim(),
+  };
 };
 
 const Home: React.FC = () => {
@@ -95,6 +108,7 @@ const Home: React.FC = () => {
     process.env.NODE_ENV === "development"
       ? "http://localhost:8000"
       : process.env.REACT_APP_API_URL || "";
+  const responseSections = splitResponseSections(response);
 
   const loadTemplates = async () => {
     if (!BASE_URL && process.env.NODE_ENV !== "development") return;
@@ -215,7 +229,6 @@ const Home: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: templateForm.title,
-          category: templateForm.category,
           description: templateForm.description,
           tags: templateForm.tags
             .split(",")
@@ -275,7 +288,6 @@ const Home: React.FC = () => {
                     onClick={() => setSelectedTemplate(template)}
                   >
                     <h3>{template.title}</h3>
-                    <span>{template.category}</span>
                   </TemplateRow>
                 </TemplateItem>
               ))}
@@ -291,16 +303,6 @@ const Home: React.FC = () => {
               value={templateForm.title}
               onChange={(e) =>
                 setTemplateForm((prev) => ({ ...prev, title: e.target.value }))
-              }
-            />
-            <TemplateInput
-              placeholder="Category"
-              value={templateForm.category}
-              onChange={(e) =>
-                setTemplateForm((prev) => ({
-                  ...prev,
-                  category: e.target.value,
-                }))
               }
             />
             <TemplateInput
@@ -338,11 +340,11 @@ const Home: React.FC = () => {
 
       <ChatBox>
         <Title>Hey Write!</Title>
-        <Subtitle>Tell me what you'd like to say. I'll help you say it well.</Subtitle>
+        <Subtitle>Write in your style — save templates, generate with them anytime.</Subtitle>
 
         <IntentTextarea
           rows={5}
-          placeholder="Describe what you want to write, e.g., an invitation email for a meeting"
+          placeholder="e.g., Summarize today's product sync meeting, or draft this week's report for Project Alpha"
           value={intent}
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
             setIntent(e.target.value)
@@ -393,9 +395,6 @@ const Home: React.FC = () => {
         {response && (
           <ResponseBox>
             <ResponseTitle>Your Draft</ResponseTitle>
-            <CopyButton onClick={handleCopy}>
-              {copied ? "Copied!" : "Copy"}
-            </CopyButton>
             {templateMeta && (
               <TemplateMetaBox>
                 <strong>Template source</strong>
@@ -415,7 +414,20 @@ const Home: React.FC = () => {
                 )}
               </TemplateMetaBox>
             )}
-            <ResponseText data-testid="main-reply">{response}</ResponseText>
+            <ResponseText data-testid="main-reply">
+              <ResponseTextHeader>
+                <CopyButton onClick={handleCopy}>
+                  {copied ? "Copied!" : "Copy"}
+                </CopyButton>
+              </ResponseTextHeader>
+              <div>{responseSections.draft || response}</div>
+            </ResponseText>
+            {responseSections.changes && (
+              <ChangesBox data-testid="changes-summary">
+                <strong>Changes</strong>
+                <p>{responseSections.changes}</p>
+              </ChangesBox>
+            )}
           </ResponseBox>
         )}
       </ChatBox>
@@ -436,9 +448,7 @@ const Home: React.FC = () => {
             <TemplateModalHeader>
               <div>
                 <h3>{selectedTemplate.title}</h3>
-                <p>
-                  {selectedTemplate.category} · {selectedTemplate.language}
-                </p>
+                <p>{selectedTemplate.language}</p>
               </div>
               <ModalCloseButton
                 type="button"

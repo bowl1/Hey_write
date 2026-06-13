@@ -38,37 +38,49 @@ Now enhanced with Retrieval-Augmented Generation (RAG), custom templates, multi-
 | **Backend**     | FastAPI (deployed on Render) |
 | **AI Model**    | DeepSeek Chat API                     |
 | **Embedding**   | OpenAI Embeddings (`text-embedding-3-small`)  |
-| **Vector Store**| ChromaDB                              |
+| **Template Store**| Postgres                             |
+| **Vector Store**| pgvector                              |
 | **Frameworks**  | LangChain for RAG and template routing |
 | **Deployment**  | Render + Docker+ GitHub Actions |
 ---
 
 
-## 🧱 Build / Rebuild Vector DB
+## 🧱 Template DB / Vector Index
 
-When templates change, or when switching embedding models, rebuild Chroma:
+Templates and template embeddings are stored in Postgres with pgvector.
+Set these environment variables before running template mode:
 
 ```bash
 cd chatbox-backend
-python3 chroma_setup/chroma_db.py
+export DATABASE_URL="postgresql://user:password@localhost:5432/heywrite"
+export OPENAI_API_KEY="..."
+export DEEPSEEK_API_KEY="..."
+```
+
+To initialize the `vector` extension, create template indexes, seed bundled JSON templates into Postgres, and refresh template embeddings:
+
+```bash
+cd chatbox-backend
+./.venv/bin/python langchain_runner/build_vectorstore.py
 ```
 
 
 ## 📂 Architecture Overview
 
 1. **Intent Input** →  
-2. **Vector Search (Chroma + LangChain Retriever)** →  
+2. **Vector Search (Postgres pgvector cosine distance)** →  
 3. **LLM Prompting with Context** →  
 4. **Document Draft Output**  
 5. **Editable + Copyable + Chat History Aware**
 
-Template mode uses vector similarity distance for match gating (`similarity_search_with_score`), with default threshold `SIMILARITY_THRESHOLD = 0.65` (configurable via env var) in `chatbox-backend/langchain_runner/rag_chain.py`.
+Template mode uses pgvector cosine distance for match gating, with default threshold `SIMILARITY_THRESHOLD = 0.65` (configurable via env var) in `chatbox-backend/langchain_runner/rag_chain.py`.
 
 ## 🖥️ Local Run
 
 Prerequisites:
 - Python 3
 - Node.js + npm
+- Postgres with pgvector
 
 Run frontend + backend with one command:
 
