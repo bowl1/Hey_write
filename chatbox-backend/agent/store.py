@@ -68,6 +68,133 @@ def load_session(session_id: str) -> dict[str, Any] | None:
         ).fetchone()
 
 
+def load_session_snapshot(session_id: str) -> dict[str, Any] | None:
+    init_agent_db()
+    with get_connection() as conn:
+        session = conn.execute(
+            """
+            SELECT session_id, active_template_id, current_draft, style, language,
+                   created_at, updated_at
+            FROM agent_sessions
+            WHERE session_id = %s
+            """,
+            (session_id,),
+        ).fetchone()
+        if not session:
+            return None
+
+        messages = conn.execute(
+            """
+            SELECT role, content, created_at
+            FROM messages
+            WHERE session_id = %s
+            ORDER BY created_at ASC, message_id ASC
+            """,
+            (session_id,),
+        ).fetchall()
+        last_run = conn.execute(
+            """
+            SELECT run_id, action, intent, selected_template_id,
+                   output_state, trace, reply, created_at
+            FROM agent_runs
+            WHERE session_id = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (session_id,),
+        ).fetchone()
+
+    return {
+        "session": {
+            "session_id": session["session_id"],
+            "active_template_id": session.get("active_template_id"),
+            "current_draft": session.get("current_draft") or "",
+            "style": session.get("style") or "Formal",
+            "language": session.get("language") or "English",
+            "created_at": session.get("created_at").isoformat() if session.get("created_at") else None,
+            "updated_at": session.get("updated_at").isoformat() if session.get("updated_at") else None,
+        },
+        "messages": [
+            {
+                "role": message["role"],
+                "content": message["content"],
+                "created_at": message.get("created_at").isoformat() if message.get("created_at") else None,
+            }
+            for message in messages
+        ],
+        "last_run": (
+            {
+                "run_id": last_run["run_id"],
+                "action": last_run["action"],
+                "intent": last_run["intent"],
+                "selected_template_id": last_run.get("selected_template_id"),
+                "output_state": last_run.get("output_state") or {},
+                "trace": last_run.get("trace") or [],
+                "reply": last_run.get("reply") or "",
+                "created_at": last_run.get("created_at").isoformat() if last_run.get("created_at") else None,
+            }
+            if last_run
+            else None
+        ),
+    }
+
+
+def list_session_summaries(limit: int = 20) -> list[dict[str, Any]]:
+    init_agent_db()
+    with get_connection() as conn:
+        sessions = conn.execute(
+            """
+            SELECT session_id, active_template_id, current_draft, style, language,
+                   created_at, updated_at
+            FROM agent_sessions
+            WHERE session_id NOT LIKE 'eval-%'
+              AND session_id NOT LIKE 'test-%'
+              AND session_id NOT LIKE 'smoke-%'
+            ORDER BY updated_at DESC
+            LIMIT %s
+            """,
+            (limit,),
+        ).fetchall()
+
+        summaries = []
+        for session in sessions:
+            messages = conn.execute(
+                """
+                SELECT role, content, created_at
+                FROM messages
+                WHERE session_id = %s
+                ORDER BY created_at ASC, message_id ASC
+                """,
+                (session["session_id"],),
+            ).fetchall()
+            first_user_message = next(
+                (message["content"] for message in messages if message["role"] == "user"),
+                "",
+            )
+            title = first_user_message or session.get("current_draft") or "Untitled session"
+            summaries.append(
+                {
+                    "session_id": session["session_id"],
+                    "title": title[:80],
+                    "active_template_id": session.get("active_template_id"),
+                    "current_draft": session.get("current_draft") or "",
+                    "style": session.get("style") or "Formal",
+                    "language": session.get("language") or "English",
+                    "message_count": len(messages),
+                    "updated_at": session.get("updated_at").isoformat() if session.get("updated_at") else None,
+                    "messages": [
+                        {
+                            "role": message["role"],
+                            "content": message["content"],
+                            "created_at": message.get("created_at").isoformat() if message.get("created_at") else None,
+                        }
+                        for message in messages
+                    ],
+                }
+            )
+    return summaries
+
+
 def persist_agent_state(state: dict[str, Any]) -> None:
     init_agent_db()
     session_id = state["session_id"]

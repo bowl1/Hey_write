@@ -20,6 +20,12 @@ import {
   AgentTraceBox,
   HistoryPanel,
   Message,
+  SessionList,
+  SessionItem,
+  SessionRow,
+  SessionMeta,
+  SessionMessages,
+  SessionOpenButton,
   SideStack,
   Panel,
   TemplateList,
@@ -84,12 +90,32 @@ type AgentTraceItem = {
   [key: string]: any;
 };
 
+type AgentMessage = {
+  role: "user" | "assistant";
+  content: string;
+  created_at?: string;
+};
+
+type AgentSessionSummary = {
+  session_id: string;
+  title: string;
+  active_template_id?: string | null;
+  current_draft?: string;
+  style?: string;
+  language?: string;
+  message_count?: number;
+  updated_at?: string | null;
+  messages?: AgentMessage[];
+};
+
 const emptyTemplateForm = {
   title: "",
   description: "",
   tags: "",
   content: "",
 };
+
+const SESSION_STORAGE_KEY = "heywrite.session_id";
 
 const splitResponseSections = (text: string) => {
   if (!text) {
@@ -117,6 +143,10 @@ const Home: React.FC = () => {
   const [history, setHistory] = useState<
     { role: "user" | "assistant"; content: string }[]
   >([]);
+  const [sessions, setSessions] = useState<AgentSessionSummary[]>([]);
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(
+    null
+  );
   const [templates, setTemplates] = useState<Template[]>([]);
   const [templateMeta, setTemplateMeta] = useState<TemplateMeta | null>(null);
   const [agentEvaluation, setAgentEvaluation] =
@@ -162,8 +192,19 @@ const Home: React.FC = () => {
       .replace(/_/g, " ")
       .replace(/\b\w/g, (char) => char.toUpperCase());
 
+  const formatSessionDate = (value?: string | null) => {
+    if (!value) return "No date";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "No date";
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   const loadTemplates = async () => {
-    if (!BASE_URL && process.env.NODE_ENV !== "development") return;
+    if (process.env.NODE_ENV === "test") return;
+    if (!BASE_URL && process.env.NODE_ENV === "production") return;
     try {
       const res = await fetch(`${BASE_URL}/templates`);
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
@@ -174,10 +215,85 @@ const Home: React.FC = () => {
     }
   };
 
+  const applySessionSnapshot = (data: any, fallbackSessionId: string) => {
+    const session = data.session || {};
+    const lastRun = data.last_run || {};
+    const outputState = lastRun.output_state || {};
+    const nextSessionId = session.session_id || fallbackSessionId;
+
+    setSessionId(nextSessionId);
+    setExpandedSessionId(nextSessionId);
+    setActiveTemplateId(session.active_template_id || null);
+    setResponse(session.current_draft || lastRun.reply || "");
+    setLastResponse(session.current_draft || lastRun.reply || "");
+    setStyle(session.style || "Formal");
+    setLanguage(session.language || "English");
+    setHistory(data.messages || []);
+    setTemplateMeta(outputState.template_meta || null);
+    setAgentEvaluation(outputState.evaluation || null);
+    setAgentTrace(lastRun.trace || []);
+    window.localStorage.setItem(SESSION_STORAGE_KEY, nextSessionId);
+  };
+
+  const loadSessions = async () => {
+    if (!BASE_URL && process.env.NODE_ENV === "production") return;
+    try {
+      const res = await fetch(`${BASE_URL}/agent/sessions`);
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const data = await res.json();
+      setSessions(data.sessions || []);
+    } catch (error) {
+      console.error("Failed to load sessions:", error);
+    }
+  };
+
+  const restoreSessionById = async (targetSessionId: string) => {
+    if (!targetSessionId) return;
+    if (!BASE_URL && process.env.NODE_ENV === "production") return;
+
+    try {
+      const res = await fetch(`${BASE_URL}/agent/session/${targetSessionId}`);
+      if (res.status === 404) {
+        if (targetSessionId === window.localStorage.getItem(SESSION_STORAGE_KEY)) {
+          window.localStorage.removeItem(SESSION_STORAGE_KEY);
+        }
+        return;
+      }
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      applySessionSnapshot(await res.json(), targetSessionId);
+    } catch (error) {
+      console.error("Failed to restore session:", error);
+    }
+  };
+
+  const restoreStoredSession = async () => {
+    const storedSessionId = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!storedSessionId) return;
+    await restoreSessionById(storedSessionId);
+  };
+
   useEffect(() => {
+    const storedSessionId = window.localStorage.getItem(SESSION_STORAGE_KEY);
     loadTemplates();
+    if (process.env.NODE_ENV !== "test" || storedSessionId) {
+      loadSessions();
+    }
+    restoreStoredSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const resetConversation = () => {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    setSessionId(null);
+    setActiveTemplateId(null);
+    setResponse("");
+    setLastResponse("");
+    setHistory([]);
+    setTemplateMeta(null);
+    setAgentEvaluation(null);
+    setAgentTrace([]);
+    setExpandedSessionId(null);
+  };
 
   const runAgent = async (action: AgentAction) => {
     if (!intent.trim()) return;
@@ -215,13 +331,20 @@ const Home: React.FC = () => {
       setTemplateMeta(data.template_meta || null);
       setAgentEvaluation(data.evaluation || null);
       setAgentTrace(data.trace || []);
-      setSessionId(data.state?.session_id || sessionId);
+      const nextSessionId = data.state?.session_id || sessionId;
+      setSessionId(nextSessionId);
+      if (nextSessionId) {
+        window.localStorage.setItem(SESSION_STORAGE_KEY, nextSessionId);
+      }
       setActiveTemplateId(data.state?.active_template_id || null);
       setHistory((prev) => [
         ...prev,
         { role: "user", content: intent },
         { role: "assistant", content: data.reply || "" },
       ]);
+      if (process.env.NODE_ENV !== "test") {
+        loadSessions();
+      }
     } catch (error: any) {
       console.error("Agent run failed:", error);
       alert(`Generation failed: ${error.message}`);
@@ -296,6 +419,29 @@ const Home: React.FC = () => {
       setTemplateMessage(`Template save failed: ${error.message}`);
     }
   };
+
+  const currentSessionFallback: AgentSessionSummary | null =
+    sessionId && history.length > 0
+      ? {
+          session_id: sessionId,
+          title:
+            history.find((message) => message.role === "user")?.content ||
+            "Current session",
+          active_template_id: activeTemplateId,
+          current_draft: response,
+          style,
+          language,
+          message_count: history.length,
+          messages: history,
+        }
+      : null;
+  const visibleSessions =
+    currentSessionFallback &&
+    !sessions.some((session) => session.session_id === sessionId)
+      ? [currentSessionFallback, ...sessions]
+      : sessions;
+  const sessionMessages = (session: AgentSessionSummary) =>
+    session.session_id === sessionId ? history : session.messages || [];
 
   return (
     <PageContainer className="page-home">
@@ -414,7 +560,7 @@ const Home: React.FC = () => {
               ⬅️ Back to Last Version
             </UndoButton>
           )}
-          <ResetButton onClick={() => setHistory([])}>
+          <ResetButton onClick={resetConversation}>
             🔄 Reset Conversation
           </ResetButton>
         </ResponseControls>
@@ -513,12 +659,63 @@ const Home: React.FC = () => {
 
       <HistoryPanel>
         <h2>Conversation History</h2>
-        {history.map((msg, index) => (
-          <Message key={index} className={msg.role} role={msg.role}>
-            <strong>{msg.role === "user" ? "You" : "HeyWrite"}:</strong>
-            <p>{msg.content}</p>
-          </Message>
-        ))}
+        {visibleSessions.length === 0 && <p>No saved sessions yet.</p>}
+        {visibleSessions.length > 0 && (
+          <SessionList data-testid="session-list">
+            {visibleSessions.map((session) => {
+              const expanded = expandedSessionId === session.session_id;
+              const messages = sessionMessages(session);
+              return (
+                <SessionItem
+                  key={session.session_id}
+                  data-testid={`session-item-${session.session_id}`}
+                  data-active={session.session_id === sessionId}
+                >
+                  <SessionRow
+                    type="button"
+                    onClick={() =>
+                      setExpandedSessionId(expanded ? null : session.session_id)
+                    }
+                    aria-expanded={expanded}
+                  >
+                    <div>
+                      <h3>{session.title || "Untitled session"}</h3>
+                      <SessionMeta>
+                        {session.message_count || messages.length} messages ·{" "}
+                        {formatSessionDate(session.updated_at)}
+                      </SessionMeta>
+                    </div>
+                    <span>{expanded ? "▲" : "▼"}</span>
+                  </SessionRow>
+                  {expanded && (
+                    <SessionMessages>
+                      {session.session_id !== sessionId && (
+                        <SessionOpenButton
+                          type="button"
+                          onClick={() => restoreSessionById(session.session_id)}
+                        >
+                          Open session
+                        </SessionOpenButton>
+                      )}
+                      {messages.map((msg, index) => (
+                        <Message
+                          key={`${session.session_id}-${index}`}
+                          className={msg.role}
+                          role={msg.role}
+                        >
+                          <strong>
+                            {msg.role === "user" ? "You" : "HeyWrite"}:
+                          </strong>
+                          <p>{msg.content}</p>
+                        </Message>
+                      ))}
+                    </SessionMessages>
+                  )}
+                </SessionItem>
+              );
+            })}
+          </SessionList>
+        )}
       </HistoryPanel>
 
       {selectedTemplate && (

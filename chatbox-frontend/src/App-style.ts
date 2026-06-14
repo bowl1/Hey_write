@@ -16,6 +16,8 @@ const paper  = "#fffdf9";   // card surface
 const linen  = "#f5f0e8";   // page background
 const border = "#e4dbd0";   // subtle warm border
 const borderFocus = "#c45c2b";
+const radiusMd = "8px";
+const radiusSm = "7px";
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
@@ -198,17 +200,28 @@ export const Button = styled.button`
   font-size: 0.78rem;
   font-weight: 500;
   padding: 0.4rem 0.875rem;
-  border-radius: 3px;
+  border-radius: ${radiusSm};
   border: 1px solid ${border};
   background: transparent;
   color: ${muted};
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s;
 
   &:hover {
     background: #f0e9de;
     border-color: #c9a98a;
     color: ${body};
+    box-shadow: 0 2px 8px rgba(60, 40, 20, 0.08);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 
   @media (max-width: 768px) {
@@ -237,19 +250,25 @@ export const GenerateButton = styled.button`
   font-size: 0.9rem;
   font-weight: 600;
   padding: 0.8rem 1rem;
-  border-radius: 3px;
+  border-radius: ${radiusMd};
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.15s ease;
   letter-spacing: 0.01em;
 
   /* Default: outlined */
-  background: transparent;
+  background: #fffaf3;
   color: ${clay};
   border: 1.5px solid ${clay};
+  box-shadow: 0 1px 4px rgba(60, 40, 20, 0.05);
 
   &:hover:not(:disabled) {
     background: #fdf1ea;
     transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(196, 92, 43, 0.14);
   }
 
   /* Last child: filled */
@@ -257,7 +276,7 @@ export const GenerateButton = styled.button`
     background: ${clay};
     color: #fffdf9;
     border-color: ${clay};
-    box-shadow: 0 2px 8px rgba(196, 92, 43, 0.25);
+    box-shadow: 0 4px 14px rgba(196, 92, 43, 0.25);
 
     &:hover:not(:disabled) {
       background: ${clayDk};
@@ -306,17 +325,28 @@ export const CopyButton = styled.button`
   font-size: 0.75rem;
   font-weight: 500;
   padding: 0.3rem 0.75rem;
-  border-radius: 3px;
+  border-radius: ${radiusSm};
   border: 1px solid ${border};
   background: transparent;
   color: ${muted};
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s;
 
   &:hover {
     background: #f0e9de;
     border-color: #c9a98a;
     color: ${body};
+    box-shadow: 0 2px 8px rgba(60, 40, 20, 0.08);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
 
@@ -466,6 +496,122 @@ export const HistoryPanel = styled.div`
     position: static;
     padding: 1.25rem;
   }
+
+  > p {
+    margin: 0;
+    color: ${muted};
+    font-family: "Inter", sans-serif;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+`;
+
+export const SessionList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-height: calc(100vh - 8rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.25rem;
+
+  @media (max-width: 900px) {
+    max-height: 420px;
+  }
+`;
+
+export const SessionItem = styled.div`
+  border: 1px solid ${border};
+  border-left: 3px solid ${border};
+  background: ${linen};
+  border-radius: ${radiusMd};
+  overflow: hidden;
+
+  &[data-active="true"] {
+    border-left-color: ${clay};
+    background: #fffaf3;
+  }
+`;
+
+export const SessionRow = styled.button`
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  color: ${body};
+  font-family: "Inter", sans-serif;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: #fffaf3;
+  }
+
+  h3 {
+    margin: 0 0 0.2rem;
+    color: ${ink};
+    font-size: 0.82rem;
+    line-height: 1.3;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  span {
+    flex-shrink: 0;
+    color: ${muted};
+    font-size: 0.68rem;
+  }
+`;
+
+export const SessionMeta = styled.div`
+  color: ${muted};
+  font-size: 0.68rem;
+  line-height: 1.35;
+`;
+
+export const SessionMessages = styled.div`
+  border-top: 1px solid ${border};
+  background: ${paper};
+  padding: 0.7rem;
+`;
+
+export const SessionOpenButton = styled.button`
+  width: 100%;
+  margin-bottom: 0.65rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: ${radiusSm};
+  border: 1px solid ${border};
+  background: #fffaf3;
+  color: ${clay};
+  font-family: "Inter", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s;
+
+  &:hover {
+    border-color: ${clay};
+    background: #fdf1ea;
+    box-shadow: 0 2px 8px rgba(196, 92, 43, 0.12);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 `;
 
 export const SideStack = styled.div`
@@ -519,6 +665,7 @@ export const DropdownHeader = styled.button`
   cursor: pointer;
   color: ${muted};
   font-family: "Inter", sans-serif;
+  border-radius: ${radiusSm};
 
   h2 {
     margin: 0;
@@ -544,7 +691,7 @@ export const TemplateList = styled.div`
 export const TemplateItem = styled.div`
   border: 1px solid ${border};
   background: ${linen};
-  border-radius: 2px;
+  border-radius: ${radiusMd};
   overflow: hidden;
 `;
 
@@ -561,6 +708,11 @@ export const TemplateRow = styled.button`
   cursor: pointer;
   color: ${body};
   font-family: "Inter", sans-serif;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: #fffaf3;
+  }
 
   h3 {
     margin: 0;
@@ -687,15 +839,28 @@ export const ModalCloseButton = styled.button`
   border: 1px solid ${border};
   background: transparent;
   color: ${muted};
-  border-radius: 2px;
+  border-radius: ${radiusSm};
   padding: 0.25rem 0.55rem;
   cursor: pointer;
   font-family: "Inter", sans-serif;
   font-size: 0.76rem;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s;
 
   &:hover {
     background: #f0e9de;
+    border-color: #c9a98a;
     color: ${body};
+    box-shadow: 0 2px 8px rgba(60, 40, 20, 0.08);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
 

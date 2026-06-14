@@ -127,6 +127,21 @@ agent_runs
 messages
 ```
 
+The frontend stores the current `session_id` in `localStorage` and restores it with:
+
+```text
+GET /agent/session/{session_id}
+```
+
+The right-side Conversation History is session-based and loads recent sessions with:
+
+```text
+GET /agent/sessions
+```
+
+Users can expand a session to inspect its messages, then open that session to recover the active draft, active template, message history, last trace, and last evaluator result as long as the same backend database is still available.
+Evaluation and local test sessions using prefixes such as `eval-`, `test-`, and `smoke-` are filtered out of this session list.
+
 Each response includes `reply`, `template_meta`, `evaluation`, `state`, and `trace` so the UI can show which template was used, why it was used, what the agent did, and whether the output passed evaluator checks.
 
 Evaluator checks:

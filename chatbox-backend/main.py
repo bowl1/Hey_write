@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import logging
 from agent import AgentRunRequest, run_agent
+from agent.store import list_session_summaries, load_session_snapshot
 from template_store import list_templates, get_template, save_template, upsert_template_embedding
 
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +39,29 @@ def agent_run(body: AgentRunRequest):
     except Exception as e:
         logger.error("Agent run failed", exc_info=True)
         raise HTTPException(status_code=503, detail=f"Agent unavailable: {e}")
+
+
+@app.get("/agent/sessions")
+def agent_sessions():
+    try:
+        return {"sessions": list_session_summaries()}
+    except Exception as e:
+        logger.error("Failed to list agent sessions", exc_info=True)
+        raise HTTPException(status_code=503, detail=f"Agent sessions unavailable: {e}")
+
+
+@app.get("/agent/session/{session_id}")
+def agent_session(session_id: str):
+    try:
+        snapshot = load_session_snapshot(session_id)
+        if not snapshot:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return snapshot
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to load agent session", exc_info=True)
+        raise HTTPException(status_code=503, detail=f"Agent session unavailable: {e}")
 
 
 @app.get("/templates")

@@ -1,6 +1,11 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import Home from "./App";
 
+beforeEach(() => {
+  window.localStorage.clear();
+  jest.clearAllMocks();
+});
+
 test("does not submit when input is empty", () => {
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
@@ -20,6 +25,12 @@ test("does not submit when input is empty", () => {
 test("shows response after clicking generate button", async () => {
   global.fetch = jest.fn((url) => {
     const requestUrl = String(url);
+    if (requestUrl.includes("/agent/sessions")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ sessions: [] }),
+      });
+    }
     return Promise.resolve({
       ok: true,
       json: async () =>
@@ -65,11 +76,97 @@ test("shows response after clicking generate button", async () => {
   expect(await screen.findByTestId("agent-evaluation")).toHaveTextContent(
     "Evaluator passed"
   );
+  expect(window.localStorage.getItem("heywrite.session_id")).toBe("session-1");
+});
+
+test("restores the previous session from local storage", async () => {
+  window.localStorage.setItem("heywrite.session_id", "session-restore");
+  global.fetch = jest.fn((url) => {
+    const requestUrl = String(url);
+    if (requestUrl.includes("/agent/sessions")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          sessions: [
+            {
+              session_id: "session-restore",
+              title: "Write invitation",
+              message_count: 2,
+              updated_at: "2026-06-15T10:00:00Z",
+              messages: [
+                { role: "user", content: "Write invitation" },
+                { role: "assistant", content: "Restored draft body" },
+              ],
+            },
+          ],
+        }),
+      });
+    }
+    if (requestUrl.includes("/templates")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ templates: [] }),
+      });
+    }
+    if (requestUrl.includes("/agent/session/session-restore")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          session: {
+            session_id: "session-restore",
+            active_template_id: "meeting_invitation",
+            current_draft: "Restored draft body",
+            style: "Formal",
+            language: "English",
+          },
+          messages: [
+            { role: "user", content: "Write invitation" },
+            { role: "assistant", content: "Restored draft body" },
+          ],
+          last_run: {
+            output_state: {
+              template_meta: {
+                used_template: true,
+                selected_template: "Meeting Invitation",
+                selected_template_id: "meeting_invitation",
+              },
+              evaluation: {
+                passed: true,
+                checks: { contains_changes: true },
+              },
+            },
+            trace: [{ node: "evaluator", status: "passed" }],
+            reply: "Restored draft body",
+          },
+        }),
+      });
+    }
+    return Promise.reject(new Error(`Unexpected URL: ${requestUrl}`));
+  });
+
+  render(<Home />);
+
+  expect(await screen.findByTestId("main-reply")).toHaveTextContent(
+    "Restored draft body"
+  );
+  expect(await screen.findByTestId("agent-trace")).toHaveTextContent(
+    "evaluator"
+  );
+  expect(await screen.findByTestId("session-list")).toHaveTextContent(
+    "Write invitation"
+  );
+  expect(screen.getAllByText(/Write invitation/i).length).toBeGreaterThan(0);
 });
 
 test("continues editing the current draft without retrieving a new template", async () => {
   global.fetch = jest.fn((url, options = {}) => {
     const requestUrl = String(url);
+    if (requestUrl.includes("/agent/sessions")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ sessions: [] }),
+      });
+    }
     if (requestUrl.includes("/templates")) {
       return Promise.resolve({
         ok: true,
@@ -134,14 +231,12 @@ test("continues editing the current draft without retrieving a new template", as
   expect(await screen.findByTestId("main-reply")).toHaveTextContent(
     "Dear Anna"
   );
-  const lastCallOptions =
-    global.fetch.mock.calls[global.fetch.mock.calls.length - 1][1];
-  expect(global.fetch).toHaveBeenLastCalledWith(
-    expect.stringContaining("/agent/run"),
-    expect.anything()
+  const agentRunCalls = global.fetch.mock.calls.filter(([url]) =>
+    String(url).includes("/agent/run")
   );
-  expect(lastCallOptions.body).toContain('"action":"continue_editing"');
-  expect(lastCallOptions.body).toContain(
+  const lastAgentRunOptions = agentRunCalls[agentRunCalls.length - 1][1];
+  expect(lastAgentRunOptions.body).toContain('"action":"continue_editing"');
+  expect(lastAgentRunOptions.body).toContain(
     '"active_template_id":"meeting_invitation"'
   );
 });
