@@ -374,6 +374,38 @@ export const ChangesBox = styled.div`
   }
 `;
 
+export const AgentTraceBox = styled.div`
+  margin-top: 0.875rem;
+  padding: 0.85rem 1rem;
+  background: #fffdf9;
+  border: 1px solid ${border};
+  border-radius: 2px;
+  font-family: "Inter", sans-serif;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: ${muted};
+
+  strong {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  p {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 0.2rem 0;
+  }
+
+  span {
+    color: ${body};
+    font-weight: 600;
+  }
+`;
+
 export const TemplateMetaBox = styled.div`
   clear: both;
   margin-bottom: 0.875rem;

@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 from pathlib import Path
@@ -19,6 +20,9 @@ load_dotenv(BACKEND_ROOT / ".env", override=True)
 TEMPLATE_DIR = Path(os.getenv("TEMPLATE_DIR", "./templates"))
 EMBEDDING_MODEL = os.getenv("TEMPLATE_EMBEDDING_MODEL", "text-embedding-3-small")
 EMBEDDING_DIMENSION = int(os.getenv("TEMPLATE_EMBEDDING_DIMENSION", "1536"))
+VECTOR_WEIGHT = float(os.getenv("TEMPLATE_VECTOR_WEIGHT", "0.7"))
+BM25_WEIGHT = float(os.getenv("TEMPLATE_BM25_WEIGHT", "0.3"))
+RETRIEVAL_CANDIDATE_LIMIT = int(os.getenv("TEMPLATE_RETRIEVAL_CANDIDATE_LIMIT", "20"))
 
 embedding_client = None
 
@@ -65,7 +69,7 @@ def template_id_from_filename(path: Path) -> str:
 
 
 def is_template_file(path: Path) -> bool:
-    return path.suffix == ".json" and not path.name.endswith(".embedding.json")
+    return path.suffix == ".json"
 
 
 def infer_structure(content: str) -> list[str]:
@@ -135,6 +139,62 @@ def build_embedding_text(template: dict[str, Any]) -> str:
             *[f"- {case}" for case in template.get("use_cases", [])],
         ]
     )
+
+
+def build_retrieval_text(template: dict[str, Any]) -> str:
+    weighted_parts = [
+        template.get("title", ""),
+        template.get("title", ""),
+        template.get("category", ""),
+        template.get("description", ""),
+        " ".join(template.get("tags", [])),
+        " ".join(template.get("tags", [])),
+        " ".join(template.get("use_cases", [])),
+        " ".join(template.get("structure", [])),
+    ]
+    return " ".join(part for part in weighted_parts if part)
+
+
+def tokenize(text: str) -> list[str]:
+    return re.findall(r"[a-zA-Z0-9]+", text.lower())
+
+
+def bm25_scores(query: str, templates: list[dict[str, Any]]) -> tuple[dict[str, float], dict[str, list[str]]]:
+    query_terms = tokenize(query)
+    if not query_terms or not templates:
+        return {}, {}
+
+    docs = {template["id"]: tokenize(build_retrieval_text(template)) for template in templates}
+    avgdl = sum(len(tokens) for tokens in docs.values()) / max(len(docs), 1)
+    document_frequency: dict[str, int] = {}
+    for term in set(query_terms):
+        document_frequency[term] = sum(1 for tokens in docs.values() if term in tokens)
+
+    scores: dict[str, float] = {}
+    matched_terms: dict[str, list[str]] = {}
+    k1 = 1.5
+    b = 0.75
+    total_docs = len(docs)
+
+    for template_id, tokens in docs.items():
+        if not tokens:
+            scores[template_id] = 0.0
+            matched_terms[template_id] = []
+            continue
+        term_counts = {term: tokens.count(term) for term in set(query_terms)}
+        score = 0.0
+        matched = []
+        for term, frequency in term_counts.items():
+            if frequency <= 0:
+                continue
+            matched.append(term)
+            df = document_frequency.get(term, 0)
+            idf = math.log(1 + (total_docs - df + 0.5) / (df + 0.5))
+            denominator = frequency + k1 * (1 - b + b * len(tokens) / max(avgdl, 1))
+            score += idf * (frequency * (k1 + 1)) / denominator
+        scores[template_id] = score
+        matched_terms[template_id] = matched
+    return scores, matched_terms
 
 
 def init_db() -> None:
@@ -291,11 +351,12 @@ def upsert_template_embedding(template: dict[str, Any]) -> None:
         )
 
 
-def search_templates(query: str, limit: int = 3) -> list[tuple[dict[str, Any], float]]:
+def search_templates_with_metadata(query: str, limit: int = 3) -> list[dict[str, Any]]:
     init_db()
     query_vector = vector_literal(embed_text(query))
+    candidate_limit = max(limit, RETRIEVAL_CANDIDATE_LIMIT)
     with get_connection() as conn:
-        rows = conn.execute(
+        vector_rows = conn.execute(
             """
             SELECT id, title, category, description, tags, style, language,
                    use_cases, structure, content, enabled, version, created_at, updated_at,
@@ -305,9 +366,67 @@ def search_templates(query: str, limit: int = 3) -> list[tuple[dict[str, Any], f
             ORDER BY embedding <=> %s::vector
             LIMIT %s
             """,
-            (query_vector, query_vector, limit),
+            (query_vector, query_vector, candidate_limit),
         ).fetchall()
-    return [(row_to_template(row), float(row["distance"])) for row in rows]
+        lexical_rows = conn.execute(
+            """
+            SELECT id, title, category, description, tags, style, language,
+                   use_cases, structure, content, enabled, version, created_at, updated_at
+            FROM templates
+            WHERE enabled = true
+            """,
+        ).fetchall()
+
+    all_templates = [row_to_template(row) for row in lexical_rows]
+    lexical_scores, matched_terms = bm25_scores(query, all_templates)
+    max_bm25 = max(lexical_scores.values(), default=0.0)
+    lexical_top_ids = {
+        template_id
+        for template_id, _score in sorted(
+            lexical_scores.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        )[:candidate_limit]
+    }
+    vector_distances = {
+        row["id"]: float(row["distance"])
+        for row in vector_rows
+    }
+    vector_top_ids = set(vector_distances)
+    templates_by_id = {template["id"]: template for template in all_templates}
+    candidate_ids = vector_top_ids | lexical_top_ids
+
+    ranked = []
+    for template_id in candidate_ids:
+        template = templates_by_id.get(template_id)
+        if not template:
+            continue
+        vector_distance = vector_distances.get(template_id)
+        vector_score = max(0.0, 1.0 - vector_distance) if vector_distance is not None else 0.0
+        raw_bm25 = lexical_scores.get(template["id"], 0.0)
+        normalized_bm25 = raw_bm25 / max_bm25 if max_bm25 else 0.0
+        final_score = VECTOR_WEIGHT * vector_score + BM25_WEIGHT * normalized_bm25
+        if template_id in vector_top_ids and template_id in lexical_top_ids:
+            source = "hybrid"
+        elif template_id in vector_top_ids:
+            source = "vector"
+        else:
+            source = "keyword"
+        ranked.append(
+            {
+                "template": template,
+                "distance": 1.0 - final_score,
+                "vector_distance": vector_distance,
+                "vector_score": vector_score,
+                "bm25_score": normalized_bm25,
+                "raw_bm25_score": raw_bm25,
+                "final_score": final_score,
+                "retrieval_source": source,
+                "matched_terms": matched_terms.get(template["id"], []),
+            }
+        )
+    ranked.sort(key=lambda item: item["final_score"], reverse=True)
+    return ranked[:limit]
 
 
 def read_template_file(path: Path) -> dict[str, Any]:

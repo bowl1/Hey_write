@@ -17,6 +17,7 @@ import {
   ResponseText,
   ResponseTextHeader,
   ChangesBox,
+  AgentTraceBox,
   HistoryPanel,
   Message,
   SideStack,
@@ -61,7 +62,26 @@ type TemplateMeta = {
   selected_template?: string;
   selected_template_id?: string;
   match_score?: number;
+  vector_distance?: number;
+  bm25_score?: number;
+  final_score?: number;
+  matched_terms?: string[];
   reason?: string;
+};
+
+type AgentEvaluation = {
+  passed?: boolean;
+  checks?: Record<string, boolean>;
+  issues?: string[];
+  reason?: string;
+  source?: string;
+};
+
+type AgentAction = "new_task" | "continue_editing" | "wild";
+
+type AgentTraceItem = {
+  node: string;
+  [key: string]: any;
 };
 
 const emptyTemplateForm = {
@@ -99,6 +119,8 @@ const Home: React.FC = () => {
   >([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [templateMeta, setTemplateMeta] = useState<TemplateMeta | null>(null);
+  const [agentEvaluation, setAgentEvaluation] =
+    useState<AgentEvaluation | null>(null);
   const [templateForm, setTemplateForm] = useState(emptyTemplateForm);
   const [templateMessage, setTemplateMessage] = useState<string>("");
   const [templateLibraryOpen, setTemplateLibraryOpen] =
@@ -106,13 +128,39 @@ const Home: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
     null
   );
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+  const [agentTrace, setAgentTrace] = useState<AgentTraceItem[]>([]);
 
   const BASE_URL =
     process.env.NODE_ENV === "development"
       ? "http://localhost:8000"
       : process.env.REACT_APP_API_URL || "";
   const responseSections = splitResponseSections(response);
+
+  const summarizeTrace = (item: AgentTraceItem) => {
+    if (item.node === "start") return item.action;
+    if (item.node === "retrieve_template")
+      return `${item.results?.length || 0} candidates`;
+    if (item.node === "generate_draft")
+      return item.selected_template_id || item.status;
+    if (item.node === "load_active_template")
+      return item.template_id || "none";
+    if (item.node === "revise_draft")
+      return item.used_active_template ? "active template" : item.status;
+    if (item.node === "planner") return item.decision;
+    if (item.node === "evaluator")
+      return item.failed_checks?.length
+        ? item.failed_checks.join(", ")
+        : item.status;
+    if (item.node === "revise_with_feedback") return item.status;
+    return item.status || item.decision || "";
+  };
+
+  const labelEvaluationCheck = (name: string) =>
+    name
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
 
   const loadTemplates = async () => {
     if (!BASE_URL && process.env.NODE_ENV !== "development") return;
@@ -131,116 +179,53 @@ const Home: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSubmit = async () => {
+  const runAgent = async (action: AgentAction) => {
     if (!intent.trim()) return;
-    setLoading(true);
-    setLastResponse(response);
-    setResponse("");
-    setTemplateMeta(null);
-
-    try {
-      const res = await fetch(`${BASE_URL}/write`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intent, style, language, history }),
-      });
-
-      if (!res.ok)
-        throw new Error(`Server returned ${res.status}: ${await res.text()}`);
-      const data = await res.json();
-      setResponse(data.reply || "");
-      setActiveTemplateId(null);
-      setHistory((prev) => [
-        ...prev,
-        { role: "user", content: intent },
-        { role: "assistant", content: data.reply || "" },
-      ]);
-    } catch (error: any) {
-      console.error("Error in handleSubmit:", error);
-      alert(`Generation failed: ${error.message}`);
-      setResponse("");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmitWithTemplate = async () => {
-    if (!intent.trim()) return;
-    setLoading(true);
-    setLastResponse(response);
-    setResponse("");
-    setTemplateMeta(null);
-    setActiveTemplateId(null);
-
-    try {
-      const res = await fetch(`${BASE_URL}/write_with_template`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intent, style, language, history }),
-      });
-
-      if (!res.ok)
-        throw new Error(`Server returned ${res.status}: ${await res.text()}`);
-      const data = await res.json();
-
-      setResponse(data.reply || "");
-      setTemplateMeta(data.template_meta || null);
-      setActiveTemplateId(data.template_meta?.selected_template_id || null);
-      setHistory((prev) => [
-        ...prev,
-        { role: "user", content: intent },
-        { role: "assistant", content: data.reply || "" },
-      ]);
-    } catch (error: any) {
-      console.error("Error in handleSubmitWithTemplate:", error);
-      alert(`Generation failed: ${error.message}`);
-      setResponse("");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleContinueEditing = async () => {
-    if (!intent.trim() || !response.trim()) return;
+    if (action === "continue_editing" && !response.trim()) return;
     const previousResponse = response;
     const currentDraft = responseSections.draft || response;
     setLoading(true);
     setLastResponse(response);
     setResponse("");
     setTemplateMeta(null);
+    setAgentEvaluation(null);
+    setAgentTrace([]);
 
     try {
-      const res = await fetch(`${BASE_URL}/continue_editing`, {
+      const res = await fetch(`${BASE_URL}/agent/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          session_id: sessionId,
+          action,
           intent,
           style,
           language,
           history,
-          current_draft: currentDraft,
-          active_template_id: activeTemplateId,
+          current_draft: action === "continue_editing" ? currentDraft : "",
+          active_template_id:
+            action === "continue_editing" ? activeTemplateId : null,
         }),
       });
 
       if (!res.ok)
         throw new Error(`Server returned ${res.status}: ${await res.text()}`);
       const data = await res.json();
-
       setResponse(data.reply || "");
       setTemplateMeta(data.template_meta || null);
-      setActiveTemplateId(
-        data.template_meta?.selected_template_id || activeTemplateId
-      );
+      setAgentEvaluation(data.evaluation || null);
+      setAgentTrace(data.trace || []);
+      setSessionId(data.state?.session_id || sessionId);
+      setActiveTemplateId(data.state?.active_template_id || null);
       setHistory((prev) => [
         ...prev,
         { role: "user", content: intent },
         { role: "assistant", content: data.reply || "" },
       ]);
     } catch (error: any) {
-      console.error("Error in handleContinueEditing:", error);
-      alert(`Continue editing failed: ${error.message}`);
-      setResponse(previousResponse);
+      console.error("Agent run failed:", error);
+      alert(`Generation failed: ${error.message}`);
+      setResponse(action === "continue_editing" ? previousResponse : "");
     } finally {
       setLoading(false);
     }
@@ -435,16 +420,19 @@ const Home: React.FC = () => {
         </ResponseControls>
 
         <GenerateButtons>
-          <GenerateButton onClick={handleSubmitWithTemplate} disabled={loading}>
+          <GenerateButton
+            onClick={() => runAgent("new_task")}
+            disabled={loading}
+          >
             Generate with Template
           </GenerateButton>
           <GenerateButton
-            onClick={handleContinueEditing}
+            onClick={() => runAgent("continue_editing")}
             disabled={loading || !response}
           >
             Continue Editing
           </GenerateButton>
-          <GenerateButton onClick={handleSubmit} disabled={loading}>
+          <GenerateButton onClick={() => runAgent("wild")} disabled={loading}>
             {loading
               ? "Writing... It takes around 1 minute"
               : "✨ Generate something wild"}
@@ -486,6 +474,38 @@ const Home: React.FC = () => {
                 <strong>Changes</strong>
                 <p>{responseSections.changes}</p>
               </ChangesBox>
+            )}
+            {agentTrace.length > 0 && (
+              <AgentTraceBox data-testid="agent-trace">
+                <strong>Agent trace</strong>
+                {agentTrace.map((item, index) => (
+                  <p key={`${item.node}-${index}`}>
+                    <span>{item.node}</span>
+                    {summarizeTrace(item)}
+                  </p>
+                ))}
+              </AgentTraceBox>
+            )}
+            {agentEvaluation?.checks && (
+              <AgentTraceBox data-testid="agent-evaluation">
+                <strong>
+                  Evaluator {agentEvaluation.passed ? "passed" : "failed"}
+                </strong>
+                {(agentEvaluation.source || agentEvaluation.reason) && (
+                  <p>
+                    <span>{agentEvaluation.source || "source"}</span>
+                    {agentEvaluation.reason || ""}
+                  </p>
+                )}
+                {Object.entries(agentEvaluation.checks).map(
+                  ([name, passed]) => (
+                    <p key={name}>
+                      <span>{passed ? "Pass" : "Fail"}</span>
+                      {labelEvaluationCheck(name)}
+                    </p>
+                  )
+                )}
+              </AgentTraceBox>
             )}
           </ResponseBox>
         )}

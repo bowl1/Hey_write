@@ -40,7 +40,7 @@ Now enhanced with Retrieval-Augmented Generation (RAG), custom templates, multi-
 | **Embedding**   | OpenAI Embeddings (`text-embedding-3-small`)  |
 | **Template Store**| Postgres                             |
 | **Vector Store**| pgvector                              |
-| **Frameworks**  | LangChain for RAG and template routing |
+| **Agent Framework**| LangGraph controlled agent loop + LangChain model adapters |
 | **Deployment**  | Render + Docker+ GitHub Actions |
 ---
 
@@ -55,6 +55,7 @@ cd chatbox-backend
 export DATABASE_URL="postgresql://user:password@localhost:5432/heywrite"
 export OPENAI_API_KEY="..."
 export DEEPSEEK_API_KEY="..."
+export AGENT_LLM_EVALUATOR_ENABLED="true"
 ```
 
 To initialize the `vector` extension, create template indexes, seed bundled JSON templates into Postgres, and refresh template embeddings:
@@ -67,13 +68,87 @@ cd chatbox-backend
 
 ## 📂 Architecture Overview
 
-1. **Intent Input** →  
-2. **Vector Search (Postgres pgvector cosine distance)** →  
-3. **LLM Prompting with Context** →  
-4. **Document Draft Output**  
-5. **Editable + Copyable + Chat History Aware**
+The main AI endpoint is:
 
-Template mode uses pgvector cosine distance for match gating, with default threshold `SIMILARITY_THRESHOLD = 0.65` (configurable via env var) in `chatbox-backend/langchain_runner/rag_chain.py`.
+```text
+POST /agent/run
+```
+
+The frontend sends an explicit action:
+
+```text
+new_task          -> Generate with Template
+continue_editing  -> Continue Editing
+wild              -> Generate something wild
+```
+
+LangGraph agent loop:
+
+```text
+load_session
+  -> planner
+  -> tool node
+     - retrieve_template
+     - generate_draft
+     - load_active_template
+     - revise_draft
+     - generate_wild
+  -> observe
+  -> planner
+  -> finalize
+  -> evaluator
+  -> if failed: revise_with_feedback -> evaluator
+  -> persist_state
+```
+
+The planner loops until the draft is complete or the step limit is reached.
+Action constraints still apply:
+
+- `new_task` can retrieve templates and generate a new draft.
+- `continue_editing` loads the active template and revises the current draft without reselecting templates.
+- `wild` generates without template retrieval.
+
+Template mode uses hybrid retrieval:
+
+```text
+query
+  -> pgvector semantic top-k
+  -> BM25 keyword top-k
+  -> merge candidates
+  -> weighted rerank
+  -> return top templates with scores and matched terms
+```
+
+Agent state and observability are stored in Postgres:
+
+```text
+agent_sessions
+agent_runs
+messages
+```
+
+Each response includes `reply`, `template_meta`, `evaluation`, `state`, and `trace` so the UI can show which template was used, why it was used, what the agent did, and whether the output passed evaluator checks.
+
+Evaluator checks:
+
+- Preserves original structure when revising an existing draft.
+- Completes the user's request.
+- Uses the correct template behavior for the selected action.
+- Includes a `Changes` section.
+- Avoids obvious unrelated fabrication.
+
+The evaluator combines deterministic guardrails with optional LLM-as-judge:
+
+- Deterministic checks handle hard constraints such as `Changes`, template action behavior, and explicitly requested names or numbers.
+- LLM-as-judge handles semantic checks such as whether the user request was actually completed and whether the revision stayed on scope.
+- If the evaluator fails, the graph performs one `revise_with_feedback` retry before persisting the final result.
+
+Run eval cases:
+
+```bash
+cd chatbox-backend
+./.venv/bin/python tests/evals/run_writing_agent_eval.py
+```
 
 ## 🖥️ Local Run
 
