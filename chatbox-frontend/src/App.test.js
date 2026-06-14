@@ -4,6 +4,11 @@ import Home from "./App";
 beforeEach(() => {
   window.localStorage.clear();
   jest.clearAllMocks();
+  Object.assign(navigator, {
+    clipboard: {
+      writeText: jest.fn(),
+    },
+  });
 });
 
 test("does not submit when input is empty", () => {
@@ -37,7 +42,8 @@ test("shows response after clicking generate button", async () => {
         requestUrl.includes("/templates")
           ? { templates: [] }
           : {
-              reply: "This is a test reply\n\nChanges:\n- Added a clearer opening",
+              reply:
+                "**This** is a *test* reply\n\nSecond paragraph stays separate.\nStill same paragraph.\n\n| Owner | Task |\n| --- | --- |\n| Anna | Send sample data |\n\nClosing paragraph.\n\nChanges:\n* Added a clearer opening",
               template_meta: { used_template: false },
               evaluation: {
                 passed: true,
@@ -68,9 +74,20 @@ test("shows response after clicking generate button", async () => {
 
   const replyElement = await screen.findByTestId("main-reply");
   expect(replyElement).toHaveTextContent("This is a test reply");
+  expect(replyElement.querySelectorAll("p")).toHaveLength(3);
+  expect(replyElement.querySelector("table")).toBeInTheDocument();
+  expect(replyElement).toHaveTextContent("Owner");
+  expect(replyElement).toHaveTextContent("Anna");
+  expect(replyElement).not.toHaveTextContent("**");
+  expect(replyElement).not.toHaveTextContent("*test*");
+  expect(replyElement).not.toHaveTextContent("| Owner |");
   expect(replyElement).not.toHaveTextContent("Added a clearer opening");
   expect(await screen.findByTestId("changes-summary")).toHaveTextContent(
     "Added a clearer opening"
+  );
+  fireEvent.click(screen.getByText("Copy"));
+  expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+    "This is a test reply\n\nSecond paragraph stays separate.\nStill same paragraph.\n\nOwner\tTask\nAnna\tSend sample data\n\nClosing paragraph."
   );
   expect(await screen.findByTestId("agent-trace")).toHaveTextContent("start");
   expect(await screen.findByTestId("agent-evaluation")).toHaveTextContent(
@@ -94,8 +111,8 @@ test("restores the previous session from local storage", async () => {
               message_count: 2,
               updated_at: "2026-06-15T10:00:00Z",
               messages: [
-                { role: "user", content: "Write invitation" },
-                { role: "assistant", content: "Restored draft body" },
+                { role: "user", content: "**Write** invitation" },
+                { role: "assistant", content: "Restored *draft* body" },
               ],
             },
           ],
@@ -120,8 +137,8 @@ test("restores the previous session from local storage", async () => {
             language: "English",
           },
           messages: [
-            { role: "user", content: "Write invitation" },
-            { role: "assistant", content: "Restored draft body" },
+            { role: "user", content: "**Write** invitation" },
+            { role: "assistant", content: "Restored *draft* body" },
           ],
           last_run: {
             output_state: {
@@ -155,7 +172,88 @@ test("restores the previous session from local storage", async () => {
   expect(await screen.findByTestId("session-list")).toHaveTextContent(
     "Write invitation"
   );
+  expect(await screen.findByTestId("session-list")).not.toHaveTextContent("**");
+  expect(await screen.findByTestId("session-list")).not.toHaveTextContent(
+    "*draft*"
+  );
   expect(screen.getAllByText(/Write invitation/i).length).toBeGreaterThan(0);
+});
+
+test("cleans markdown markers in template library and template modal", async () => {
+  global.fetch = jest.fn((url) => {
+    const requestUrl = String(url);
+    if (requestUrl.includes("/agent/sessions")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ sessions: [] }),
+      });
+    }
+    if (requestUrl.includes("/templates")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          templates: [
+            {
+              id: "customer_followup",
+              title: "**Customer** Follow-up",
+              category: "email",
+              description: "A *structured* follow-up email",
+              tags: ["**customer**", "follow-up"],
+              language: "English",
+              structure: [],
+              content:
+                "Subject: **Follow-up**\n\n| Field | Value |\n| --- | --- |\n| Name | *Customer* |",
+              enabled: true,
+            },
+          ],
+        }),
+      });
+    }
+    return Promise.reject(new Error(`Unexpected URL: ${requestUrl}`));
+  });
+
+  render(<Home />);
+
+  fireEvent.click(screen.getByText(/template library/i));
+  const templateRow = await screen.findByText("Customer Follow-up");
+  expect(templateRow).not.toHaveTextContent("**");
+  fireEvent.click(templateRow);
+
+  expect(await screen.findByText("A structured follow-up email")).toBeInTheDocument();
+  expect(screen.getByText("customer")).toBeInTheDocument();
+  expect(screen.getByText(/Subject: Follow-up/i)).toBeInTheDocument();
+  expect(screen.getByText("Field")).toBeInTheDocument();
+  expect(screen.getByText("Value")).toBeInTheDocument();
+  expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/\*Customer\*/)).not.toBeInTheDocument();
+});
+
+test("resizes conversation history with the drag handle", () => {
+  global.fetch = jest.fn((url) => {
+    const requestUrl = String(url);
+    if (requestUrl.includes("/agent/sessions")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ sessions: [] }),
+      });
+    }
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({ templates: [] }),
+    });
+  });
+
+  render(<Home />);
+
+  const handle = screen.getByLabelText("Resize conversation history");
+  fireEvent.mouseDown(handle, { clientX: 900 });
+  fireEvent.mouseMove(window, { clientX: 820 });
+  fireEvent.mouseUp(window);
+
+  const storedWidth = Number(window.localStorage.getItem("heywrite.history_width"));
+  expect(storedWidth).toBeGreaterThanOrEqual(240);
+  expect(storedWidth).toBeLessThanOrEqual(520);
+  expect(storedWidth).not.toBe(300);
 });
 
 test("continues editing the current draft without retrieving a new template", async () => {

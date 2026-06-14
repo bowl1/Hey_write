@@ -19,6 +19,7 @@ import {
   ChangesBox,
   AgentTraceBox,
   HistoryPanel,
+  HistoryResizeHandle,
   Message,
   SessionList,
   SessionItem,
@@ -116,6 +117,12 @@ const emptyTemplateForm = {
 };
 
 const SESSION_STORAGE_KEY = "heywrite.session_id";
+const HISTORY_WIDTH_STORAGE_KEY = "heywrite.history_width";
+const MIN_HISTORY_WIDTH = 240;
+const MAX_HISTORY_WIDTH = 520;
+
+const clampHistoryWidth = (value: number) =>
+  Math.min(MAX_HISTORY_WIDTH, Math.max(MIN_HISTORY_WIDTH, value));
 
 const splitResponseSections = (text: string) => {
   if (!text) {
@@ -130,6 +137,125 @@ const splitResponseSections = (text: string) => {
     draft: text.slice(0, match.index).trim(),
     changes: text.slice(match.index + match[0].length).trim(),
   };
+};
+
+const cleanCopyText = (text: string) =>
+  (text || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/```[\s\S]*?```/g, (block) =>
+      block.replace(/^```[a-zA-Z0-9_-]*\n?/, "").replace(/```$/, "")
+    )
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/\*\*([^*\n]+)\*\*/g, "$1")
+    .replace(/__([^_\n]+)__/g, "$1")
+    .replace(/\*([^*\n]+)\*/g, "$1")
+    .replace(/_([^_\n]+)_/g, "$1")
+    .replace(/^\s*\*\s+/gm, "- ")
+    .replace(/^\s*[-*]{3,}\s*$/gm, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+const isMarkdownTableSeparator = (line: string) =>
+  /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+
+const isMarkdownTableRow = (line: string) => line.includes("|");
+
+const splitMarkdownTableRow = (line: string) =>
+  line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cleanCopyText(cell.trim()));
+
+const markdownTablesToTsv = (text: string) => {
+  const lines = (text || "").replace(/\r\n/g, "\n").split("\n");
+  const output: string[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const nextLine = lines[index + 1] || "";
+    if (isMarkdownTableRow(line) && isMarkdownTableSeparator(nextLine)) {
+      output.push(splitMarkdownTableRow(line).join("\t"));
+      index += 2;
+      while (index < lines.length && isMarkdownTableRow(lines[index])) {
+        output.push(splitMarkdownTableRow(lines[index]).join("\t"));
+        index += 1;
+      }
+      index -= 1;
+      continue;
+    }
+    output.push(line);
+  }
+
+  return output.join("\n");
+};
+
+const cleanDisplayText = (text: string) => cleanCopyText(markdownTablesToTsv(text));
+
+const renderFormattedText = (text: string) => {
+  const lines = (text || "").replace(/\r\n/g, "\n").split("\n");
+  const blocks: React.ReactNode[] = [];
+  let textBuffer: string[] = [];
+
+  const flushText = () => {
+    const value = cleanCopyText(textBuffer.join("\n"));
+    if (value) {
+      value.split(/\n{2,}/).forEach((paragraph) => {
+        const cleanedParagraph = paragraph.trim();
+        if (cleanedParagraph) {
+          blocks.push(
+            <p key={`text-${blocks.length}`}>{cleanedParagraph}</p>
+          );
+        }
+      });
+    }
+    textBuffer = [];
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const nextLine = lines[index + 1] || "";
+
+    if (isMarkdownTableRow(line) && isMarkdownTableSeparator(nextLine)) {
+      flushText();
+      const headers = splitMarkdownTableRow(line);
+      const rows: string[][] = [];
+      index += 2;
+      while (index < lines.length && isMarkdownTableRow(lines[index])) {
+        rows.push(splitMarkdownTableRow(lines[index]));
+        index += 1;
+      }
+      index -= 1;
+      blocks.push(
+        <table key={`table-${blocks.length}`}>
+          <thead>
+            <tr>
+              {headers.map((header, cellIndex) => (
+                <th key={`${header}-${cellIndex}`}>{header}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {headers.map((_header, cellIndex) => (
+                  <td key={cellIndex}>{row[cellIndex] || ""}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+      continue;
+    }
+
+    textBuffer.push(line);
+  }
+
+  flushText();
+  return blocks;
 };
 
 const Home: React.FC = () => {
@@ -151,6 +277,14 @@ const Home: React.FC = () => {
   const [templateMeta, setTemplateMeta] = useState<TemplateMeta | null>(null);
   const [agentEvaluation, setAgentEvaluation] =
     useState<AgentEvaluation | null>(null);
+  const [historyWidth, setHistoryWidth] = useState<number>(() => {
+    const storedWidth = Number(
+      window.localStorage.getItem(HISTORY_WIDTH_STORAGE_KEY)
+    );
+    return Number.isFinite(storedWidth)
+      ? clampHistoryWidth(storedWidth)
+      : 300;
+  });
   const [templateForm, setTemplateForm] = useState(emptyTemplateForm);
   const [templateMessage, setTemplateMessage] = useState<string>("");
   const [templateLibraryOpen, setTemplateLibraryOpen] =
@@ -167,6 +301,8 @@ const Home: React.FC = () => {
       ? "http://localhost:8000"
       : process.env.REACT_APP_API_URL || "";
   const responseSections = splitResponseSections(response);
+  const cleanDraft = cleanDisplayText(responseSections.draft || response);
+  const cleanChanges = cleanDisplayText(responseSections.changes);
 
   const summarizeTrace = (item: AgentTraceItem) => {
     if (item.node === "start") return item.action;
@@ -202,8 +338,8 @@ const Home: React.FC = () => {
     });
   };
 
-  const loadTemplates = async () => {
-    if (process.env.NODE_ENV === "test") return;
+  const loadTemplates = async (force = false) => {
+    if (!force && process.env.NODE_ENV === "test") return;
     if (!BASE_URL && process.env.NODE_ENV === "production") return;
     try {
       const res = await fetch(`${BASE_URL}/templates`);
@@ -367,8 +503,8 @@ const Home: React.FC = () => {
   };
 
   const handleCopy = () => {
-    if (response) {
-      navigator.clipboard.writeText(response);
+    if (cleanDraft) {
+      navigator.clipboard.writeText(cleanDraft);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -420,6 +556,35 @@ const Home: React.FC = () => {
     }
   };
 
+  const handleHistoryResizeStart = (
+    event: React.MouseEvent<HTMLDivElement>
+  ) => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = historyWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const nextWidth = clampHistoryWidth(startWidth - (moveEvent.clientX - startX));
+      setHistoryWidth(nextWidth);
+      window.localStorage.setItem(
+        HISTORY_WIDTH_STORAGE_KEY,
+        String(nextWidth)
+      );
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
   const currentSessionFallback: AgentSessionSummary | null =
     sessionId && history.length > 0
       ? {
@@ -444,12 +609,17 @@ const Home: React.FC = () => {
     session.session_id === sessionId ? history : session.messages || [];
 
   return (
-    <PageContainer className="page-home">
+    <PageContainer className="page-home" historyWidth={historyWidth}>
       <SideStack>
         <Panel>
           <DropdownHeader
             type="button"
-            onClick={() => setTemplateLibraryOpen((open) => !open)}
+            onClick={() => {
+              setTemplateLibraryOpen((open) => !open);
+              if (!templateLibraryOpen) {
+                loadTemplates(true);
+              }
+            }}
             aria-expanded={templateLibraryOpen}
           >
             <h2>Template Library</h2>
@@ -471,7 +641,7 @@ const Home: React.FC = () => {
                     type="button"
                     onClick={() => setSelectedTemplate(template)}
                   >
-                    <h3>{template.title}</h3>
+                    <h3>{cleanCopyText(template.title)}</h3>
                   </TemplateRow>
                 </TemplateItem>
               ))}
@@ -613,12 +783,12 @@ const Home: React.FC = () => {
                   {copied ? "Copied!" : "Copy"}
                 </CopyButton>
               </ResponseTextHeader>
-              <div>{responseSections.draft || response}</div>
+              {renderFormattedText(responseSections.draft || response)}
             </ResponseText>
-            {responseSections.changes && (
+            {cleanChanges && (
               <ChangesBox data-testid="changes-summary">
                 <strong>Changes</strong>
-                <p>{responseSections.changes}</p>
+                <p>{cleanChanges}</p>
               </ChangesBox>
             )}
             {agentTrace.length > 0 && (
@@ -658,6 +828,12 @@ const Home: React.FC = () => {
       </ChatBox>
 
       <HistoryPanel>
+        <HistoryResizeHandle
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize conversation history"
+          onMouseDown={handleHistoryResizeStart}
+        />
         <h2>Conversation History</h2>
         {visibleSessions.length === 0 && <p>No saved sessions yet.</p>}
         {visibleSessions.length > 0 && (
@@ -706,7 +882,7 @@ const Home: React.FC = () => {
                           <strong>
                             {msg.role === "user" ? "You" : "HeyWrite"}:
                           </strong>
-                          <p>{msg.content}</p>
+                          <div>{renderFormattedText(msg.content)}</div>
                         </Message>
                       ))}
                     </SessionMessages>
@@ -723,7 +899,7 @@ const Home: React.FC = () => {
           <TemplateModal onClick={(event) => event.stopPropagation()}>
             <TemplateModalHeader>
               <div>
-                <h3>{selectedTemplate.title}</h3>
+                <h3>{cleanCopyText(selectedTemplate.title)}</h3>
                 <p>{selectedTemplate.language}</p>
               </div>
               <ModalCloseButton
@@ -734,13 +910,13 @@ const Home: React.FC = () => {
               </ModalCloseButton>
             </TemplateModalHeader>
             <TemplateModalBody>
-              <p>{selectedTemplate.description}</p>
+              <p>{cleanCopyText(selectedTemplate.description)}</p>
               <TemplateTagRow>
                 {(selectedTemplate.tags || []).map((tag) => (
-                  <TemplateTag key={tag}>{tag}</TemplateTag>
+                  <TemplateTag key={tag}>{cleanCopyText(tag)}</TemplateTag>
                 ))}
               </TemplateTagRow>
-              <pre>{selectedTemplate.content}</pre>
+              <div>{renderFormattedText(selectedTemplate.content)}</div>
             </TemplateModalBody>
           </TemplateModal>
         </TemplateModalBackdrop>

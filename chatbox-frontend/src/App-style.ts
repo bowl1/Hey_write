@@ -21,9 +21,10 @@ const radiusSm = "7px";
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
-export const PageContainer = styled.div`
+export const PageContainer = styled.div<{ historyWidth?: number }>`
   display: grid;
-  grid-template-columns: 300px minmax(560px, 660px) 300px;
+  grid-template-columns: 300px minmax(560px, 660px) ${(props) =>
+      props.historyWidth || 300}px;
   justify-content: center;
   align-items: flex-start;
   min-height: 100vh;
@@ -364,6 +365,41 @@ export const ResponseText = styled.div`
   border-left: 3px solid ${clay};
   border-radius: 2px;
 
+  p {
+    margin: 0;
+    white-space: pre-line;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    overflow-x: auto;
+    display: block;
+    font-family: "Inter", sans-serif;
+    font-size: 0.84rem;
+    line-height: 1.45;
+    white-space: normal;
+  }
+
+  th,
+  td {
+    min-width: 120px;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid ${border};
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: #fffaf3;
+    color: ${ink};
+    font-weight: 700;
+  }
+
+  td {
+    background: ${paper};
+  }
+
   @media (max-width: 768px) {
     font-size: 0.9rem;
     padding: 1rem 1.1rem;
@@ -468,16 +504,19 @@ export const HistoryPanel = styled.div`
     0 1px 3px rgba(60, 40, 20, 0.05),
     0 6px 20px rgba(60, 40, 20, 0.07);
   border: 1px solid ${border};
-  width: 300px;
+  width: 100%;
+  min-width: 240px;
+  max-width: 520px;
   flex-shrink: 0;
   box-sizing: border-box;
   height: fit-content;
   position: sticky;
   top: 3rem;
+  isolation: isolate;
   animation: ${fadeUp} 0.4s ease 0.1s both;
 
   @media (max-width: 1280px) {
-    width: 260px;
+    min-width: 220px;
   }
 
   h2 {
@@ -503,6 +542,36 @@ export const HistoryPanel = styled.div`
     font-family: "Inter", sans-serif;
     font-size: 0.82rem;
     line-height: 1.5;
+  }
+`;
+
+export const HistoryResizeHandle = styled.div`
+  position: absolute;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  left: -0.55rem;
+  width: 0.7rem;
+  cursor: col-resize;
+  z-index: 2;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0.32rem;
+    width: 2px;
+    border-radius: 999px;
+    background: transparent;
+    transition: background 0.15s ease;
+  }
+
+  &:hover::before {
+    background: ${clay};
+  }
+
+  @media (max-width: 900px) {
+    display: none;
   }
 `;
 
@@ -582,6 +651,41 @@ export const SessionMessages = styled.div`
   border-top: 1px solid ${border};
   background: ${paper};
   padding: 0.7rem;
+  max-height: 360px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+
+  @media (max-width: 900px) {
+    max-height: 300px;
+  }
+
+  p {
+    white-space: pre-line;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    display: block;
+    overflow-x: auto;
+    margin-top: 0.35rem;
+    font-size: 0.74rem;
+  }
+
+  th,
+  td {
+    min-width: 90px;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid ${border};
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: #fffaf3;
+    color: ${ink};
+  }
 `;
 
 export const SessionOpenButton = styled.button`
@@ -818,19 +922,47 @@ export const TemplateModalBody = styled.div`
     font-family: "Inter", sans-serif;
     font-size: 0.84rem;
     line-height: 1.55;
+    white-space: pre-line;
   }
 
-  pre {
+  pre,
+  table {
     margin: 0.9rem 0 0;
-    white-space: pre-wrap;
-    font-family: "Lora", Georgia, serif;
     font-size: 0.9rem;
     line-height: 1.65;
     color: ${body};
+  }
+
+  pre {
+    white-space: pre-wrap;
+    font-family: "Lora", Georgia, serif;
     background: ${linen};
     border: 1px solid ${border};
     padding: 1rem;
     border-radius: 2px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    display: block;
+    overflow-x: auto;
+    font-family: "Inter", sans-serif;
+  }
+
+  th,
+  td {
+    min-width: 130px;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid ${border};
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: #fffaf3;
+    color: ${ink};
+    font-weight: 700;
   }
 `;
 
