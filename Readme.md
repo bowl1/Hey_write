@@ -194,7 +194,7 @@ Stop:
 
 ### Web Demo
 
-![Demo](https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc)
+https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
 
 ---
 
