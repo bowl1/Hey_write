@@ -56,6 +56,7 @@ export DATABASE_URL="postgresql://user:password@localhost:5432/heywrite"
 export OPENAI_API_KEY="..."
 export DEEPSEEK_API_KEY="..."
 export AGENT_LLM_EVALUATOR_ENABLED="true"
+export TEMPLATE_MIN_MATCH_SCORE="0.65"
 ```
 
 To initialize the `vector` extension, create template indexes, seed bundled JSON templates into Postgres, and refresh template embeddings:
@@ -118,6 +119,8 @@ query
   -> weighted rerank
   -> return top templates with scores and matched terms
 ```
+
+The agent only accepts a template when its hybrid match score is at least `TEMPLATE_MIN_MATCH_SCORE`, which defaults to `0.65`.
 
 Agent state and observability are stored in Postgres:
 
@@ -191,7 +194,7 @@ Stop:
 
 ### Web Demo
 
-![Demo GIF](./images/demo.gif)
+![Demo](https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc)
 
 ---
 
@@ -202,33 +205,19 @@ Stop:
 
 #### 📄 User Case: Project Weekly Report  
 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <img src="images/web1.png" alt="Web UI 1" width="1000">    
-  <img src="images/web2.png" alt="Web UI 2" width="1000">    
-  <img src="images/web3.png" alt="Web UI 3" width="1000">    
+  <img src="images/web1.png" alt="Web UI 1" width="1000">  
+  Template Library  
+  <img src="images/web3.png" alt="Web UI 3" width="1000">   
+  Agent trace & Evaluation 
+    <img src="images/web2.png" alt="Web UI 2" width="1000">  
 </div>
 
 #### ⚠️ No Matched Template (using "Generate with templates" button)  
 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <img src="images/web4.png" alt="Web UI 4" width="1000">  
+  <img src="images/web4.png" alt="Web UI 4" width="1000"> 
+   Agent trace & Evaluation 
+  <img src="images/web5.png" alt="Web UI 4" width="1000"> 
 </div>
 
-#### 📑 User Case: Contract Risk Review  
-<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <img src="images/web5.png" alt="Web UI 5" width="1000">  
-  <img src="images/web6.png" alt="Web UI 6" width="1000">  
-  <img src="images/web7.png" alt="Web UI 7" width="1000">  
-  <img src="images/web8.png" alt="Web UI 8" width="1000">  
-</div>
 
 ---
-
-### Mobile UI
-
-![Demo GIF](./images/demo-mobile.gif)
-
-<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <img src="images/mobile1.png" alt="Web UI 5" width="200">  
-  <img src="images/mobile2.png" alt="Web UI 6" width="200">  
-  <img src="images/mobile3.png" alt="Web UI 7" width="200">  
-  <img src="images/mobile4.png" alt="Web UI 8" width="200">  
-</div>

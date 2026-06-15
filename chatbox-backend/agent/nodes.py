@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from langchain_runner.rag_chain import get_llm_chain
-from template_store import get_template, search_templates_with_metadata
+from template_store import MIN_MATCH_SCORE, get_template, search_templates_with_metadata
 
 from .evaluator import evaluate_agent_output
 from .state import WritingAgentState
@@ -34,7 +34,7 @@ def planner_node(state: WritingAgentState) -> WritingAgentState:
     action = state.get("action")
     next_tool = "finish"
 
-    if state.get("reply") or steps >= max_steps:
+    if state.get("reply") or state.get("blocked_reason") or steps >= max_steps:
         next_tool = "finish"
     elif action == "new_task":
         next_tool = "generate_draft" if state.get("retrieved_templates") else "retrieve_template"
@@ -91,15 +91,45 @@ def generate_draft_node(state: WritingAgentState) -> WritingAgentState:
     retrieved = state.get("retrieved_templates") or []
     if not retrieved:
         return {
-            "reply": "did not find any template matched, please try the wild mode",
+            "reply": "",
+            "blocked_reason": "no_template_match",
             "template_meta": {
                 "used_template": False,
+                "requires_template": True,
                 "reason": "No templates were returned by retrieval.",
             },
             "trace": append_trace(state, "generate_draft", status="no_template"),
         }
 
     top = retrieved[0]
+    if float(top.get("final_score") or 0.0) < MIN_MATCH_SCORE:
+        return {
+            "reply": "",
+            "blocked_reason": "no_template_match",
+            "active_template": None,
+            "active_template_id": None,
+            "template_meta": {
+                "used_template": False,
+                "requires_template": True,
+                "match_score": top.get("final_score"),
+                "min_match_score": MIN_MATCH_SCORE,
+                "selected_template": top["template"].get("title", ""),
+                "selected_template_id": top["template"].get("id", ""),
+                "reason": (
+                    f"Best template match score was below the minimum threshold "
+                    f"of {MIN_MATCH_SCORE:.2f}."
+                ),
+            },
+            "trace": append_trace(
+                state,
+                "generate_draft",
+                status="below_match_threshold",
+                selected_template_id=top["template"].get("id"),
+                match_score=top.get("final_score"),
+                min_match_score=MIN_MATCH_SCORE,
+            ),
+        }
+
     templates = [result["template"] for result in retrieved]
     context = "\n\n".join(template.get("content", "") for template in templates)
     result = get_llm_chain().run(
@@ -118,10 +148,12 @@ def generate_draft_node(state: WritingAgentState) -> WritingAgentState:
             "used_template": True,
             "selected_template": template.get("title", ""),
             "selected_template_id": template.get("id", ""),
-            "match_score": top["distance"],
+            "match_score": top["final_score"],
+            "match_distance": top["distance"],
             "vector_distance": top["vector_distance"],
             "bm25_score": top["bm25_score"],
             "final_score": top["final_score"],
+            "min_match_score": MIN_MATCH_SCORE,
             "retrieval_source": top.get("retrieval_source"),
             "matched_terms": top["matched_terms"],
             "reason": (
@@ -241,6 +273,16 @@ def observe_node(state: WritingAgentState) -> WritingAgentState:
 
 
 def finalize_node(state: WritingAgentState) -> WritingAgentState:
+    if state.get("blocked_reason") == "no_template_match":
+        return {
+            "trace": append_trace(
+                state,
+                "finalize",
+                status="blocked_no_template_match",
+                steps=state.get("steps", 0),
+            )
+        }
+
     if state.get("reply"):
         return {
             "trace": append_trace(
@@ -267,6 +309,36 @@ def finalize_node(state: WritingAgentState) -> WritingAgentState:
 
 
 def evaluator_node(state: WritingAgentState) -> WritingAgentState:
+    if state.get("blocked_reason") == "no_template_match":
+        evaluation = {
+            "passed": False,
+            "checks": {
+                "preserves_original_structure": True,
+                "completed_user_request": False,
+                "used_correct_template": False,
+                "contains_changes": False,
+                "no_unrelated_fabrication": True,
+            },
+            "issues": [
+                "completed_user_request",
+                "used_correct_template",
+                "contains_changes",
+            ],
+            "reason": "No draft was generated because no template matched the request.",
+            "source": "template_gate",
+        }
+        return {
+            "evaluation": evaluation,
+            "evaluation_feedback": "",
+            "trace": append_trace(
+                state,
+                "evaluator",
+                status="blocked_no_template_match",
+                failed_checks=evaluation["issues"],
+                source=evaluation["source"],
+            ),
+        }
+
     evaluation = evaluate_agent_output(state)
     feedback = ""
     if not evaluation["passed"]:

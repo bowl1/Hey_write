@@ -27,5 +27,6 @@ class WritingAgentState(TypedDict, total=False):
     max_retries: int
     evaluation_feedback: str
     reply: str
+    blocked_reason: str | None
     trace: list[dict[str, Any]]
     error: str | None

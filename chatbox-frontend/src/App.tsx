@@ -66,9 +66,11 @@ type Template = {
 
 type TemplateMeta = {
   used_template?: boolean;
+  requires_template?: boolean;
   selected_template?: string;
   selected_template_id?: string;
   match_score?: number;
+  min_match_score?: number;
   vector_distance?: number;
   bm25_score?: number;
   final_score?: number;
@@ -118,6 +120,11 @@ const emptyTemplateForm = {
 
 const SESSION_STORAGE_KEY = "heywrite.session_id";
 const HISTORY_WIDTH_STORAGE_KEY = "heywrite.history_width";
+
+const createSessionId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const MIN_HISTORY_WIDTH = 240;
 const MAX_HISTORY_WIDTH = 520;
 
@@ -303,6 +310,7 @@ const Home: React.FC = () => {
   const responseSections = splitResponseSections(response);
   const cleanDraft = cleanDisplayText(responseSections.draft || response);
   const cleanChanges = cleanDisplayText(responseSections.changes);
+  const hasAgentResult = Boolean(response || templateMeta || agentTrace.length);
 
   const summarizeTrace = (item: AgentTraceItem) => {
     if (item.node === "start") return item.action;
@@ -419,8 +427,9 @@ const Home: React.FC = () => {
   }, []);
 
   const resetConversation = () => {
-    window.localStorage.removeItem(SESSION_STORAGE_KEY);
-    setSessionId(null);
+    const nextSessionId = createSessionId();
+    window.localStorage.setItem(SESSION_STORAGE_KEY, nextSessionId);
+    setSessionId(nextSessionId);
     setActiveTemplateId(null);
     setResponse("");
     setLastResponse("");
@@ -428,7 +437,6 @@ const Home: React.FC = () => {
     setTemplateMeta(null);
     setAgentEvaluation(null);
     setAgentTrace([]);
-    setExpandedSessionId(null);
   };
 
   const runAgent = async (action: AgentAction) => {
@@ -755,9 +763,9 @@ const Home: React.FC = () => {
           </GenerateButton>
         </GenerateButtons>
 
-        {response && (
+        {hasAgentResult && (
           <ResponseBox>
-            <ResponseTitle>Your Draft</ResponseTitle>
+            {response && <ResponseTitle>Your Draft</ResponseTitle>}
             {templateMeta && (
               <TemplateMetaBox>
                 <strong>Template source</strong>
@@ -765,26 +773,39 @@ const Home: React.FC = () => {
                   <>
                     Used {templateMeta.selected_template || "a matched template"}
                     {typeof templateMeta.match_score === "number"
-                      ? `, distance ${templateMeta.match_score.toFixed(2)}`
+                      ? `, match score ${Math.round(
+                          templateMeta.match_score * 100
+                        )}%`
                       : ""}
                     . {templateMeta.reason}
                   </>
                 ) : (
                   <>
-                    No template used.{" "}
-                    {templateMeta.reason || "The agent fell back to wild mode."}
+                    No draft generated.{" "}
+                    {templateMeta.reason ||
+                      "No suitable template matched this request."}
+                    {typeof templateMeta.match_score === "number" &&
+                    typeof templateMeta.min_match_score === "number"
+                      ? ` Best match was ${Math.round(
+                          templateMeta.match_score * 100
+                        )}%, below the ${Math.round(
+                          templateMeta.min_match_score * 100
+                        )}% minimum.`
+                      : ""}
                   </>
                 )}
               </TemplateMetaBox>
             )}
-            <ResponseText data-testid="main-reply">
-              <ResponseTextHeader>
-                <CopyButton onClick={handleCopy}>
-                  {copied ? "Copied!" : "Copy"}
-                </CopyButton>
-              </ResponseTextHeader>
-              {renderFormattedText(responseSections.draft || response)}
-            </ResponseText>
+            {response && (
+              <ResponseText data-testid="main-reply">
+                <ResponseTextHeader>
+                  <CopyButton onClick={handleCopy}>
+                    {copied ? "Copied!" : "Copy"}
+                  </CopyButton>
+                </ResponseTextHeader>
+                {renderFormattedText(responseSections.draft || response)}
+              </ResponseText>
+            )}
             {cleanChanges && (
               <ChangesBox data-testid="changes-summary">
                 <strong>Changes</strong>

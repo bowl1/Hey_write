@@ -201,9 +201,18 @@ def persist_agent_state(state: dict[str, Any]) -> None:
     template_meta = state.get("template_meta") or {}
     active_template_id = (
         template_meta.get("selected_template_id")
-        or state.get("active_template_id")
+        if template_meta.get("used_template")
+        else None
+    ) or (
+        state.get("active_template_id")
+        if not state.get("blocked_reason")
+        else None
     )
-    current_draft = state.get("reply") or state.get("current_draft") or ""
+    current_draft = (
+        ""
+        if state.get("blocked_reason") == "no_template_match"
+        else state.get("reply") or state.get("current_draft") or ""
+    )
     input_state = {
         "action": state.get("action"),
         "intent": state.get("intent"),
@@ -216,6 +225,7 @@ def persist_agent_state(state: dict[str, Any]) -> None:
         "current_draft": current_draft,
         "template_meta": template_meta,
         "evaluation": state.get("evaluation") or {},
+        "blocked_reason": state.get("blocked_reason"),
     }
 
     with get_connection() as conn:

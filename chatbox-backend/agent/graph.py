@@ -109,7 +109,12 @@ def run_agent(request: AgentRunRequest) -> dict:
     template_meta = final_state.get("template_meta") or {}
     active_template_id = (
         template_meta.get("selected_template_id")
-        or final_state.get("active_template_id")
+        if template_meta.get("used_template")
+        else None
+    ) or (
+        final_state.get("active_template_id")
+        if not final_state.get("blocked_reason")
+        else None
     )
     return {
         "reply": final_state.get("reply", ""),
@@ -118,6 +123,7 @@ def run_agent(request: AgentRunRequest) -> dict:
         "state": {
             "session_id": session_id,
             "active_template_id": active_template_id,
+            "blocked_reason": final_state.get("blocked_reason"),
         },
         "trace": final_state.get("trace") or [],
     }
