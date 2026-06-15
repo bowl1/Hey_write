@@ -12,6 +12,16 @@ Now enhanced with Retrieval-Augmented Generation (RAG), custom templates, multi-
 
 ---
 
+## 📸 Screenshots
+
+### Web Demo
+
+https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
+
+---
+
+
+
 ## 🚀 Features
 
 -  Generate instant writing drafts from your one-sentence intent
@@ -189,16 +199,6 @@ Script behavior:
 Stop:
 - Close the frontend terminal session (the script then stops backend as well)
 
-
-## 📸 Screenshots
-
-### Web Demo
-
-https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
-
----
-
-
 ### Web UI
 
 <img src="images/web0.png" alt="Web UI 0" width="1000">  
@@ -221,3 +221,4 @@ https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
 
 
 ---
+
