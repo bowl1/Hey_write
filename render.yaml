@@ -12,6 +12,14 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: heywrite-db
+          property: connectionString
       - key: AGENT_LLM_EVALUATOR_ENABLED
         value: "true"
+
+databases:
+  - name: heywrite-db
+    databaseName: heywrite
+    user: heywrite_user
+    plan: free
