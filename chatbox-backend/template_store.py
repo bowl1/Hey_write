@@ -138,6 +138,10 @@ def build_embedding_text(template: dict[str, Any]) -> str:
             "Tags: " + ", ".join(template.get("tags", [])),
             "Use cases:",
             *[f"- {case}" for case in template.get("use_cases", [])],
+            "Structure:",
+            *[f"- {section}" for section in template.get("structure", [])],
+            "Content:",
+            template.get("content", ""),
         ]
     )
 
@@ -152,6 +156,7 @@ def build_retrieval_text(template: dict[str, Any]) -> str:
         " ".join(template.get("tags", [])),
         " ".join(template.get("use_cases", [])),
         " ".join(template.get("structure", [])),
+        template.get("content", ""),
     ]
     return " ".join(part for part in weighted_parts if part)
 
