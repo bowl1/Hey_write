@@ -36,13 +36,16 @@ class DatabaseIsolationTests(unittest.TestCase):
                 vector = [1.0] + [0.0] * (template_store.EMBEDDING_DIMENSION - 1)
                 for index, user in enumerate(users):
                     with tenant_context(user):
-                        self.assertEqual(template_store.list_templates()[0]["content"], f"private {index}")
+                        listed = template_store.list_templates()
+                        self.assertEqual(next(template for template in listed if template["id"] == "same")["content"], f"private {index}")
+                        self.assertTrue(any(template["id"].startswith("default:") for template in listed))
                         template = template_store.get_template("same")
                         with patch("template_store.embed_text", return_value=vector):
                             template_store.upsert_template_embedding(template)
                             hits = template_store.search_templates_with_metadata("private")
-                        self.assertEqual(len(hits), 1)
-                        self.assertEqual(hits[0]["template"]["content"], f"private {index}")
+                        private_hits = [hit for hit in hits if not hit["template"]["id"].startswith("default:")]
+                        self.assertEqual(len(private_hits), 1)
+                        self.assertEqual(private_hits[0]["template"]["content"], f"private {index}")
                         snapshot = store.load_session_snapshot("same-session")
                         self.assertEqual(snapshot["session"]["current_draft"], f"draft {index}")
                         self.assertEqual(snapshot["messages"][0]["content"], f"request {index}")

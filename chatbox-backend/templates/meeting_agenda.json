@@ -1,0 +1,19 @@
+{
+  "title": "Business Meeting Agenda",
+  "category": "meeting",
+  "description": "Keep a meeting focused with timed topics and decisions.",
+  "tags": [
+    "meeting",
+    "meeting agenda"
+  ],
+  "style": "Formal",
+  "language": "English",
+  "structure": [
+    "Details",
+    "Goal",
+    "Agenda",
+    "Preparation"
+  ],
+  "content": "# [Meeting title]\n\n**Date:** [Date] · **Time:** [Time and time zone]\n**Location:** [Room or meeting link]\n**Participants:** [Names]\n\n## Meeting goal\n[Decision or outcome expected by the end].\n\n## Agenda\n| Time | Topic | Lead |\n| --- | --- | --- |\n| [Duration] | Progress update | [Name] |\n| [Duration] | Main discussion | [Name] |\n| [Duration] | Decisions and next steps | [Name] |\n\n## Preparation\n- Review [Document or material].\n- Bring [Input or proposal].\n\n## Expected decisions\n[Decisions to record and owners to assign].",
+  "enabled": true
+}

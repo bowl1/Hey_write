@@ -3,6 +3,7 @@ import math
 import os
 import re
 from contextlib import nullcontext
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -255,6 +256,7 @@ def init_db(connection=None) -> None:
 
 def row_to_template(row: dict[str, Any]) -> dict[str, Any]:
     return {
+        "source": "private",
         "id": row["id"],
         "title": row["title"],
         "category": row["category"],
@@ -283,10 +285,12 @@ def list_templates() -> list[dict[str, Any]]:
             ORDER BY title
             """
         ).fetchall()
-    return [row_to_template(row) for row in rows]
+    return sorted([*list_public_templates(), *[row_to_template(row) for row in rows]], key=lambda template: template["title"])
 
 
 def get_template(template_id: str) -> dict[str, Any] | None:
+    if template_id.startswith("default:"):
+        return next((template for template in list_public_templates() if template["id"] == template_id), None)
     init_db()
     with get_connection() as conn:
         row = conn.execute(
@@ -369,7 +373,8 @@ def upsert_template_embedding(template: dict[str, Any]) -> None:
 
 def search_templates_with_metadata(query: str, limit: int = 3) -> list[dict[str, Any]]:
     init_db()
-    query_vector = vector_literal(embed_text(query))
+    query_embedding = embed_text(query)
+    query_vector = vector_literal(query_embedding)
     candidate_limit = max(limit, RETRIEVAL_CANDIDATE_LIMIT)
     with get_connection() as conn:
         vector_rows = conn.execute(
@@ -393,7 +398,16 @@ def search_templates_with_metadata(query: str, limit: int = 3) -> list[dict[str,
             """,
         ).fetchall()
 
-    all_templates = [row_to_template(row) for row in lexical_rows]
+    public_templates = list_public_templates()
+    public_distances = {}
+    for template in public_templates:
+        vector = public_template_embedding(build_embedding_text(template), EMBEDDING_MODEL)
+        if len(vector) != len(query_embedding):
+            raise ValueError("Default template embedding dimension does not match query")
+        norm = math.sqrt(sum(value * value for value in vector) * sum(value * value for value in query_embedding))
+        similarity = sum(a * b for a, b in zip(vector, query_embedding)) / norm if norm else 0.0
+        public_distances[template["id"]] = 1.0 - similarity
+    all_templates = [*public_templates, *[row_to_template(row) for row in lexical_rows]]
     lexical_scores, matched_terms = bm25_scores(query, all_templates)
     max_bm25 = max(lexical_scores.values(), default=0.0)
     lexical_top_ids = {
@@ -408,6 +422,7 @@ def search_templates_with_metadata(query: str, limit: int = 3) -> list[dict[str,
         row["id"]: float(row["distance"])
         for row in vector_rows
     }
+    vector_distances.update(public_distances)
     vector_top_ids = set(vector_distances)
     templates_by_id = {template["id"]: template for template in all_templates}
     candidate_ids = vector_top_ids | lexical_top_ids
@@ -449,6 +464,23 @@ def read_template_file(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as file:
         data = json.load(file)
     return normalize_template(data, template_id_from_filename(path))
+
+
+def list_public_templates() -> list[dict[str, Any]]:
+    # Only version-controlled bundled files are public. Never read legacy public
+    # database tables or a tenant's configurable TEMPLATE_DIR here.
+    templates = []
+    for path in sorted((BACKEND_ROOT / "templates").glob("*.json")):
+        template = read_template_file(path)
+        if template["enabled"]:
+            templates.append({**template, "id": f"default:{path.stem}", "source": "default"})
+    return templates
+
+
+@lru_cache(maxsize=128)
+def public_template_embedding(text: str, model: str) -> list[float]:
+    # Public content only; cache is shared safely across account workspaces.
+    return embed_text(text)
 
 
 def seed_templates_from_files(embed: bool = True, overwrite: bool = False) -> int:

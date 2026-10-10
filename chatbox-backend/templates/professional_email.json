@@ -1,0 +1,20 @@
+{
+  "title": "Professional Business Email",
+  "category": "email",
+  "description": "A clear business email with a specific request.",
+  "tags": [
+    "email",
+    "professional email"
+  ],
+  "style": "Formal",
+  "language": "English",
+  "structure": [
+    "Subject",
+    "Greeting",
+    "Context",
+    "Request",
+    "Closing"
+  ],
+  "content": "Subject: [Email subject]\n\nDear [Recipient name],\n\nI am writing regarding [Topic]. [Brief context and why it matters].\n\n## Requested action\nPlease [Specific request] by [Date]. This will help us [Expected outcome].\n\nThank you for your time. I look forward to hearing from you.\n\nBest regards,\n[Your name]\n[Job title]",
+  "enabled": true
+}

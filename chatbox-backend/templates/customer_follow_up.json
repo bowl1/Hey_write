@@ -1,0 +1,19 @@
+{
+  "title": "Customer Follow-up Email",
+  "category": "email",
+  "description": "Reconnect after a conversation and agree on next steps.",
+  "tags": [
+    "email",
+    "customer follow up"
+  ],
+  "style": "Formal",
+  "language": "English",
+  "structure": [
+    "Subject",
+    "Recap",
+    "Next steps",
+    "Closing"
+  ],
+  "content": "Subject: Next steps after [Meeting or conversation]\n\nHi [Customer name],\n\nThank you for discussing [Topic] with us. It was helpful to learn about [Customer priority].\n\n## What we discussed\n- [Key point one]\n- [Key point two]\n\n## Next steps\n1. [Action and owner]\n2. [Action and deadline]\n\nWould [Proposed date] work for our next conversation?\n\nBest,\n[Your name]",
+  "enabled": true
+}

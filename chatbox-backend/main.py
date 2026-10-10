@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 import logging
 from agent import AgentRunRequest, run_agent
 from agent.store import list_session_summaries, load_session_snapshot
-from template_store import list_templates, get_template, save_template, upsert_template_embedding
+from template_store import list_templates, list_public_templates, get_template, save_template, upsert_template_embedding
 from observability import shutdown_observability
 from tenancy import authenticate, tenant_context, tenant_id, ensure_workspace
 from starlette.concurrency import run_in_threadpool
@@ -29,7 +29,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.middleware("http")
 async def tenant_middleware(request, call_next):
-    if request.method == "OPTIONS" or request.url.path == "/health":
+    if request.method == "OPTIONS" or request.url.path == "/health" or (request.method == "GET" and request.url.path == "/public/templates"):
         return await call_next(request)
     try:
         user = await authenticate(request.headers.get("authorization"))
@@ -112,6 +112,11 @@ def templates():
     except Exception as e:
         logger.error("Failed to list templates", exc_info=True)
         raise HTTPException(status_code=503, detail=f"Template store unavailable: {e}")
+
+
+@app.get("/public/templates")
+def public_templates():
+    return {"templates": list_public_templates()}
 
 
 @app.get("/templates/{template_id}")

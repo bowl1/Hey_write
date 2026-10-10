@@ -1,0 +1,19 @@
+{
+  "title": "Leave Request",
+  "category": "workplace",
+  "description": "Request time off and explain the handover plan.",
+  "tags": [
+    "workplace",
+    "leave request"
+  ],
+  "style": "Formal",
+  "language": "English",
+  "structure": [
+    "Request",
+    "Dates",
+    "Handover",
+    "Approval"
+  ],
+  "content": "Subject: Leave request · [Start date]–[End date]\n\nDear [Manager name],\n\nI would like to request [Number] days of leave from [Start date] through [End date], returning on [Return date].\n\n## Handover plan\n- **Current work:** [Tasks and status]\n- **Coverage:** [Colleague and responsibilities]\n- **Before departure:** [Items to complete]\n\nPlease let me know whether these dates can be approved.\n\nThank you,\n[Your name]",
+  "enabled": true
+}

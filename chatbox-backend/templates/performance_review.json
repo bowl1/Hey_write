@@ -1,0 +1,19 @@
+{
+  "title": "Performance Review",
+  "category": "workplace",
+  "description": "Summarize achievements, development areas and goals.",
+  "tags": [
+    "workplace",
+    "performance review"
+  ],
+  "style": "Formal",
+  "language": "English",
+  "structure": [
+    "Overview",
+    "Achievements",
+    "Development",
+    "Goals"
+  ],
+  "content": "# Performance review · [Employee name]\n\n**Review period:** [Period]\n**Role:** [Role]\n**Reviewer:** [Name]\n\n## Overall assessment\n[Balanced summary supported by specific examples].\n\n## Key achievements\n- **[Achievement]:** [Evidence and impact]\n- **[Achievement]:** [Evidence and impact]\n\n## Areas for development\n[Skill or behavior, concrete example and support needed].\n\n## Goals for the next period\n| Goal | Success measure | Target date |\n| --- | --- | --- |\n| [Goal one] | [Metric] | [Date] |\n| [Goal two] | [Metric] | [Date] |\n\n## Support and check-in\n[Training, resources and next review date].",
+  "enabled": true
+}

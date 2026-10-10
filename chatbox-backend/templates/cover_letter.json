@@ -1,0 +1,19 @@
+{
+  "title": "Job Application Cover Letter",
+  "category": "career",
+  "description": "Connect relevant experience to a specific role.",
+  "tags": [
+    "career",
+    "cover letter"
+  ],
+  "style": "Formal",
+  "language": "English",
+  "structure": [
+    "Greeting",
+    "Motivation",
+    "Evidence",
+    "Closing"
+  ],
+  "content": "Dear [Hiring manager],\n\nI am applying for the [Role] position at [Company]. Your work on [Specific initiative] aligns with my experience in [Relevant field].\n\n## Relevant experience\nIn my role at [Previous company], I [Concrete achievement], resulting in [Measurable outcome]. I also [Second relevant example].\n\n## Why this role\n[Explain your interest and how your skills address the job requirements].\n\nI would welcome the opportunity to discuss how I can contribute to [Team or goal]. Thank you for considering my application.\n\nSincerely,\n[Your name]\n[Contact details]",
+  "enabled": true
+}

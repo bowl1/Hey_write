@@ -1,0 +1,18 @@
+{
+  "title": "Customer Support Reply",
+  "category": "support",
+  "description": "A thoughtful response with practical resolution steps.",
+  "tags": [
+    "support",
+    "customer support reply"
+  ],
+  "style": "Friendly",
+  "language": "English",
+  "structure": [
+    "Acknowledgment",
+    "Resolution",
+    "Next step"
+  ],
+  "content": "Subject: Help with [Issue]\n\nHi [Customer name],\n\nThank you for reaching out. I understand that [Issue] has affected [Customer impact].\n\n## How to resolve this\n1. [First troubleshooting step]\n2. [Second troubleshooting step]\n3. [How to confirm the issue is resolved]\n\nIf this continues, please send [Required information] so we can investigate further.\n\nWe will follow up by [Date or time].\n\nKind regards,\n[Support representative]",
+  "enabled": true
+}

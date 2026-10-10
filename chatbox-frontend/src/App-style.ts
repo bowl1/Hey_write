@@ -926,13 +926,14 @@ export const TemplateModalBackdrop = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
-  background: rgba(28, 24, 21, 0.36);
+  padding: clamp(0.75rem, 3vw, 2rem);
+  background: rgba(28, 24, 21, 0.48);
+  backdrop-filter: blur(4px);
 `;
 
 export const TemplateModal = styled.div`
   width: min(760px, 100%);
-  max-height: min(78vh, 760px);
+  max-height: 90dvh;
   overflow: hidden;
   background: ${paper};
   border: 1px solid ${border};
@@ -955,8 +956,9 @@ export const TemplateModalHeader = styled.div`
   h3 {
     margin: 0 0 0.35rem;
     color: ${ink};
-    font-family: "Inter", sans-serif;
-    font-size: 1rem;
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 1.35rem;
+    line-height: 1.35;
   }
 
   p {
@@ -967,9 +969,34 @@ export const TemplateModalHeader = styled.div`
   }
 `;
 
+export const TemplateDocument = styled.article`
+  margin-top: 1.25rem;
+  padding: clamp(1rem, 4vw, 2.5rem);
+  background: #ffffff;
+  border: 1px solid ${border};
+  border-radius: 8px;
+  box-shadow: 0 3px 14px rgba(28, 24, 21, 0.04);
+  overflow-wrap: anywhere;
+  && p, li { font-family: "Lora", Georgia, serif; font-size: 0.94rem; line-height: 1.85; color: ${body}; }
+  && p { margin: 0 0 1rem; }
+  h2 { margin: 0 0 1.5rem; font-family: "Playfair Display", Georgia, serif; font-size: 1.65rem; color: ${ink}; line-height: 1.3; }
+  h3 { margin: 1.75rem 0 0.65rem; font-family: "Inter", sans-serif; font-size: 0.95rem; color: ${ink}; }
+  ul, ol { padding-left: 1.4rem; margin: 0.5rem 0 1.25rem; }
+  li { padding-left: 0.25rem; margin-bottom: 0.4rem; }
+  strong { color: ${ink}; }
+  mark { color: ${clayDk}; background: #faf0e6; border-radius: 3px; padding: 0.08rem 0.25rem; box-decoration-break: clone; }
+  hr { border: 0; border-top: 1px solid ${border}; margin: 1.75rem 0; }
+  .preview-table { overflow-x: auto; margin-bottom: 1.25rem; }
+  > :first-child { margin-top: 0; }
+  > :last-child { margin-bottom: 0; }
+`;
+
 export const TemplateModalBody = styled.div`
   padding: 1.2rem 1.4rem 1.4rem;
   overflow: auto;
+  min-height: 0;
+
+  .preview-hint { margin-top: 1rem; color: ${muted}; font-size: 0.75rem; }
 
   p {
     margin: 0 0 0.8rem;

@@ -1,0 +1,19 @@
+{
+  "title": "Social Media Campaign Post",
+  "category": "marketing",
+  "description": "Create an engaging post with a concise hook and next step.",
+  "tags": [
+    "marketing",
+    "social media post"
+  ],
+  "style": "Friendly",
+  "language": "English",
+  "structure": [
+    "Hook",
+    "Value",
+    "Call to action",
+    "Hashtags"
+  ],
+  "content": "# [Campaign or topic]\n\n[Opening hook that speaks to your audience].\n\n[Short explanation of the idea, news or offer and why it matters].\n\n## Key takeaways\n- [Benefit or insight one]\n- [Benefit or insight two]\n- [Benefit or insight three]\n\n**Take the next step:** [Action and link]\n\n[Relevant hashtags]",
+  "enabled": true
+}

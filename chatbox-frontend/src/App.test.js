@@ -26,6 +26,18 @@ test("guests can explore the interface and generation requests sign-in without c
   expect(input).toHaveValue("write a welcome note");
 });
 
+test("guests can browse the default template library without signing in", async () => {
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ templates: [
+    { id: "default:meeting", title: "Default Meeting Invitation", tags: [], content: "Dear team" },
+  ] }) });
+  const requireAuth = jest.fn();
+  render(<Home onRequireAuth={requireAuth} />);
+  fireEvent.click(screen.getByRole("button", { name: /Template Library/ }));
+  expect(await screen.findByText("Default Meeting Invitation")).toBeInTheDocument();
+  expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("/public/templates"));
+  expect(requireAuth).not.toHaveBeenCalled();
+});
+
 test("the queued guest request runs once after sign-in with its original input", async () => {
   global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ reply: "Welcome!", state: { session_id: "session-after-sign-in" } }) });
   const handled = jest.fn();
@@ -412,7 +424,7 @@ test("cleans markdown markers in template library and template modal", async () 
               language: "English",
               structure: [],
               content:
-                "Subject: **Follow-up**\n\n| Field | Value |\n| --- | --- |\n| Name | *Customer* |",
+                "Subject: **Follow-up**\n\n## Next steps\n- Contact [Customer name]\n- Confirm the deadline\n\n| Field | Value |\n| --- | --- |\n| Name | *Customer* |",
               enabled: true,
             },
           ],
@@ -431,7 +443,11 @@ test("cleans markdown markers in template library and template modal", async () 
 
   expect(await screen.findByText("A structured follow-up email")).toBeInTheDocument();
   expect(screen.getByText("customer")).toBeInTheDocument();
-  expect(screen.getByText(/Subject: Follow-up/i)).toBeInTheDocument();
+  expect(screen.getByText((text, element) => element.tagName === "P" && element.textContent === "Subject: Follow-up")).toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "Customer Follow-up" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Next steps" })).toBeInTheDocument();
+  expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  expect(screen.getByText("[Customer name]").tagName).toBe("MARK");
   expect(screen.getByText("Field")).toBeInTheDocument();
   expect(screen.getByText("Value")).toBeInTheDocument();
   expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();

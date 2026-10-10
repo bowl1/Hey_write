@@ -1,0 +1,20 @@
+{
+  "title": "Product Launch Announcement",
+  "category": "marketing",
+  "description": "Introduce a product through its benefits and a clear call to action.",
+  "tags": [
+    "marketing",
+    "product launch"
+  ],
+  "style": "Friendly",
+  "language": "English",
+  "structure": [
+    "Headline",
+    "Value",
+    "Features",
+    "Availability",
+    "Call to action"
+  ],
+  "content": "# Introducing [Product name]\n\n[One-sentence explanation of who it helps and what it does].\n\n## Built for [Audience]\n[Describe the customer problem and the benefit of solving it].\n\n## What you can do\n- **[Feature one]:** [Customer benefit]\n- **[Feature two]:** [Customer benefit]\n- **[Feature three]:** [Customer benefit]\n\n## Available [Launch date]\n[Availability, pricing or access details].\n\n**Get started:** [Call to action and destination]",
+  "enabled": true
+}

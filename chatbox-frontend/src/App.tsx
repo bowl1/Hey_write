@@ -49,6 +49,7 @@ import {
   TemplateModal,
   TemplateModalHeader,
   TemplateModalBody,
+  TemplateDocument,
   ModalCloseButton,
 } from "./App-style";
 
@@ -59,6 +60,7 @@ import {
 } from "./components/option";
 
 type Template = {
+  source?: "default" | "private";
   id: string;
   title: string;
   category: string;
@@ -274,6 +276,51 @@ const renderFormattedText = (text: string) => {
   return blocks;
 };
 
+const previewInline = (text: string): React.ReactNode[] =>
+  text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]\n]+\])/g).map((part, index) => {
+    if (part.startsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*")) return <em key={index}>{part.slice(1, -1)}</em>;
+    if (part.startsWith("[")) return <mark key={index}>{part}</mark>;
+    return part;
+  });
+
+const renderTemplatePreview = (text: string): React.ReactNode[] => {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const blocks: React.ReactNode[] = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const key = blocks.length;
+    if (isMarkdownTableRow(line) && isMarkdownTableSeparator(lines[i + 1] || "")) {
+      const table: string[] = [line, lines[++i]];
+      while (isMarkdownTableRow(lines[i + 1] || "")) table.push(lines[++i]);
+      const headers = splitMarkdownTableRow(table[0]);
+      blocks.push(<div className="preview-table" key={key}><table>
+        <thead><tr>{headers.map((cell, index) => <th key={index}>{previewInline(cell)}</th>)}</tr></thead>
+        <tbody>{table.slice(2).map((row, rowIndex) => <tr key={rowIndex}>{headers.map((_, cellIndex) => <td key={cellIndex}>{previewInline(splitMarkdownTableRow(row)[cellIndex] || "")}</td>)}</tr>)}</tbody>
+      </table></div>);
+    } else if (/^#{1,6}\s/.test(line)) {
+      const title = previewInline(line.replace(/^#{1,6}\s+/, ""));
+      blocks.push(line.startsWith("# ") ? <h2 key={key}>{title}</h2> : <h3 key={key}>{title}</h3>);
+    } else if (/^([-*_])\1{2,}$/.test(line)) {
+      blocks.push(<hr key={key} />);
+    } else if (/^(?:[-*] |\d+\. )/.test(line)) {
+      const ordered = /^\d+\. /.test(line);
+      const pattern = ordered ? /^\d+\. / : /^[-*] /;
+      const items: React.ReactNode[] = [];
+      do { items.push(<li key={items.length}>{previewInline(lines[i].trim().replace(pattern, ""))}</li>); i += 1; }
+      while (i < lines.length && pattern.test(lines[i].trim()));
+      i -= 1;
+      blocks.push(ordered ? <ol key={key}>{items}</ol> : <ul key={key}>{items}</ul>);
+    } else {
+      const paragraph = [line];
+      while (i + 1 < lines.length && lines[i + 1].trim() && !/^(?:#{1,6}\s|[-*] |\d+\. |\||([-*_])\1{2,}$)/.test(lines[i + 1].trim())) paragraph.push(lines[++i]);
+      blocks.push(<p key={key}>{previewInline(paragraph.join("\n"))}</p>);
+    }
+  }
+  return blocks;
+};
+
 export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onRequireAuth, pendingGeneration, onPendingHandled }) => {
   const SESSION_STORAGE_KEY = `heywrite.session_id:${userId}`;
   const [intent, setIntent] = useState<string>(pendingGeneration?.intent || "");
@@ -292,6 +339,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
     null
   );
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [templateStatus, setTemplateStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle");
   const [templateMeta, setTemplateMeta] = useState<TemplateMeta | null>(null);
   const [draftNotice, setDraftNotice] = useState("");
   const [agentEvaluation, setAgentEvaluation] =
@@ -311,6 +359,28 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
     null
   );
+  const previewRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selectedTemplate) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    previewRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedTemplate(null);
+      if (event.key === "Tab") {
+        event.preventDefault();
+        previewRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [selectedTemplate]);
+
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
   const [agentTrace, setAgentTrace] = useState<AgentTraceItem[]>([]);
@@ -359,15 +429,17 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
   };
 
   const loadTemplates = async (force = false) => {
-    if (!userId) return;
     if (!force && process.env.NODE_ENV === "test") return;
-    if (!BASE_URL && process.env.NODE_ENV === "production") return;
+    if (!BASE_URL && process.env.NODE_ENV === "production") { setTemplateStatus("error"); return; }
+    setTemplateStatus("loading");
     try {
-      const res = await apiFetch(`${BASE_URL}/templates`);
+      const res = userId ? await apiFetch(`${BASE_URL}/templates`) : await fetch(`${BASE_URL}/public/templates`);
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const data = await res.json();
       setTemplates(data.templates || []);
+      setTemplateStatus("loaded");
     } catch (error) {
+      setTemplateStatus("error");
       console.error("Failed to load templates:", error);
     }
   };
@@ -434,9 +506,9 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
   };
 
   useEffect(() => {
+    loadTemplates();
     if (!userId) return;
     const storedSessionId = window.localStorage.getItem(SESSION_STORAGE_KEY);
-    loadTemplates();
     if (process.env.NODE_ENV !== "test" || storedSessionId) {
       loadSessions();
     }
@@ -675,8 +747,8 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
             <TemplateList>
               {templates.length === 0 && (
                 <TemplateItem>
-                  <h3>No templates loaded</h3>
-                  <p>Create one below or start the backend to load templates.</p>
+                  <h3>{templateStatus === "error" ? "Unable to load templates" : templateStatus === "loading" ? "Loading templates…" : "No templates available"}</h3>
+                  <p>{templateStatus === "error" ? "Please try opening the library again." : templateStatus === "loading" ? "Your templates will appear shortly." : "Create a template to get started."}</p>
                 </TemplateItem>
               )}
               {templates.map((template) => (
@@ -686,6 +758,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
                     onClick={() => setSelectedTemplate(template)}
                   >
                     <h3>{cleanCopyText(template.title)}</h3>
+                    {template.source === "default" && <TemplateTag>Default</TemplateTag>}
                   </TemplateRow>
                 </TemplateItem>
               ))}
@@ -964,11 +1037,11 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
 
       {selectedTemplate && (
         <TemplateModalBackdrop onClick={() => setSelectedTemplate(null)}>
-          <TemplateModal onClick={(event) => event.stopPropagation()}>
+          <TemplateModal ref={previewRef} role="dialog" aria-modal="true" aria-labelledby="template-preview-title" onClick={(event) => event.stopPropagation()}>
             <TemplateModalHeader>
               <div>
-                <h3>{cleanCopyText(selectedTemplate.title)}</h3>
-                <p>{selectedTemplate.language}</p>
+                <h3 id="template-preview-title">{cleanCopyText(selectedTemplate.title)}</h3>
+                <p>Template preview · {selectedTemplate.language}</p>
               </div>
               <ModalCloseButton
                 type="button"
@@ -984,7 +1057,8 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
                   <TemplateTag key={tag}>{cleanCopyText(tag)}</TemplateTag>
                 ))}
               </TemplateTagRow>
-              <div>{renderFormattedText(selectedTemplate.content)}</div>
+              <p className="preview-hint">Replace the highlighted fields with your details.</p>
+              <TemplateDocument>{renderTemplatePreview(selectedTemplate.content)}</TemplateDocument>
             </TemplateModalBody>
           </TemplateModal>
         </TemplateModalBackdrop>

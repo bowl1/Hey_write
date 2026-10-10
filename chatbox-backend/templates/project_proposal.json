@@ -1,0 +1,20 @@
+{
+  "title": "Project Proposal",
+  "category": "planning",
+  "description": "Present a project with clear scope, milestones and success criteria.",
+  "tags": [
+    "planning",
+    "project proposal"
+  ],
+  "style": "Formal",
+  "language": "English",
+  "structure": [
+    "Overview",
+    "Scope",
+    "Milestones",
+    "Budget",
+    "Success criteria"
+  ],
+  "content": "# [Project name]\n\n## Overview\n[Problem to solve and proposed approach].\n\n## Objectives and scope\n- **Objective:** [Measurable objective]\n- **Deliverables:** [What will be delivered]\n- **Out of scope:** [Explicit exclusions]\n\n## Milestones\n| Milestone | Owner | Target date |\n| --- | --- | --- |\n| Discovery | [Owner] | [Date] |\n| Implementation | [Owner] | [Date] |\n| Launch | [Owner] | [Date] |\n\n## Budget and resources\n[Estimated cost, people and dependencies].\n\n## Success criteria\n[Metrics and how they will be measured].\n\n## Approval requested\n[Decision needed and deadline].",
+  "enabled": true
+}
