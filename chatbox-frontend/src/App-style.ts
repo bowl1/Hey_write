@@ -22,26 +22,27 @@ const radiusSm = "7px";
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 export const PageContainer = styled.div<{ historyWidth?: number }>`
+  position: relative;
   display: grid;
   grid-template-columns: 300px minmax(560px, 660px) ${(props) =>
       props.historyWidth || 300}px;
   justify-content: center;
   align-items: flex-start;
   min-height: 100vh;
-  padding: 3.5rem 2rem;
+  padding: 4.75rem 2rem 3.5rem;
   gap: 1.75rem;
 
   @media (max-width: 1280px) {
     grid-template-columns: 260px minmax(500px, 1fr) 260px;
     gap: 1rem;
-    padding: 2.5rem 1rem;
+    padding: 4.75rem 1rem 2.5rem;
   }
 
   @media (max-width: 900px) {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1.75rem 1rem;
+    padding: 4.5rem 1rem 1.75rem;
     gap: 1.25rem;
   }
 `;
@@ -67,14 +68,17 @@ export const ChatBox = styled.div`
 // ─── Title ────────────────────────────────────────────────────────────────────
 
 export const AccountBar = styled.div`
+  position: absolute;
+  top: 0.75rem;
+  right: 2rem;
+  left: 2rem;
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   min-width: 0;
-  margin-bottom: 1.25rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid ${border};
+
+  @media (max-width: 1280px) { right: 1rem; left: 1rem; }
 `;
 
 export const AccountEmail = styled.span`
@@ -95,14 +99,14 @@ export const AccountButton = styled.button`
   flex-shrink: 0;
   gap: 0.5rem;
   min-height: 44px;
-  padding: 0.55rem 1rem;
-  border: 1px solid #d8b8a3;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid transparent;
   border-radius: ${radiusMd};
-  background: #fffaf3;
-  color: ${clayDk};
+  background: transparent;
+  color: #6f6258;
   font-family: "Inter", sans-serif;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.4;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -110,9 +114,9 @@ export const AccountButton = styled.button`
   svg { width: 16px; height: 16px; }
 
   &:hover {
-    background: ${clayDk};
-    border-color: ${clayDk};
-    color: ${paper};
+    background: #ece5db;
+    border-color: transparent;
+    color: ${ink};
   }
 
   &:focus-visible {

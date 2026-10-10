@@ -726,6 +726,16 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
 
   return (
     <PageContainer className="page-home" historyWidth={historyWidth}>
+        <AccountBar>
+          {userId && <AccountEmail title={email}>{email}</AccountEmail>}
+          <AccountButton type="button" onClick={userId ? onSignOut : () => onRequireAuth?.()}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="8" r="3.5" />
+              <path d="M5 20v-1a7 7 0 0 1 14 0v1" />
+            </svg>
+            {userId ? "Sign out" : "Sign in"}
+          </AccountButton>
+        </AccountBar>
       <SideStack>
         <Panel>
           <DropdownHeader
@@ -810,16 +820,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
       </SideStack>
 
       <ChatBox>
-        <AccountBar>
-          {userId && <AccountEmail title={email}>{email}</AccountEmail>}
-          <AccountButton type="button" onClick={userId ? onSignOut : () => onRequireAuth?.()}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-              <circle cx="12" cy="8" r="3.5" />
-              <path d="M5 20v-1a7 7 0 0 1 14 0v1" />
-            </svg>
-            {userId ? "Sign out" : "Sign in"}
-          </AccountButton>
-        </AccountBar>
+
         <Title>Hey Write!</Title>
         <Subtitle>Write in your style — save templates, generate with them anytime.</Subtitle>
 
