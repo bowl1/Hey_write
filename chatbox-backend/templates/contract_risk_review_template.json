@@ -1,7 +1,16 @@
 {
   "title": "Contract Risk Review Template",
-  "tags": ["Legal", "Contract", "Risk", "English", "Formal"],
+  "tags": [
+    "Legal",
+    "Contract",
+    "Risk",
+    "English",
+    "Formal"
+  ],
   "style": "Formal",
   "language": "English",
-  "content": "Contract Risk Review Report\n\nContract Name: [Insert Contract Name]\nContract Date: [Insert Date]\nParties Involved: [Party A] and [Party B]\n\n---\n\n## 1. Clause-by-Clause Risk Analysis\n\n### Clause 2.1 – Termination\n- **Identified Issue**: The termination notice period is unreasonably short (7 days).\n- **Risk Level**: High\n- **Recommendation**: Extend notice period to at least 30 days to allow sufficient operational transition.\n\n### Clause 4.3 – Payment Terms\n- **Identified Issue**: Payment due within 3 days with no grace period.\n- **Risk Level**: Medium\n- **Recommendation**: Negotiate a 15-day payment term with a 5-day grace period to reduce financial pressure.\n\n### Clause 7.2 – Limitation of Liability\n- **Identified Issue**: Unlimited liability for indirect damages.\n- **Risk Level**: High\n- **Recommendation**: Cap liability at the value of the contract and exclude indirect/consequential damages.\n\n---\n\n## 2. Summary of Key Risks\n| Clause | Issue Description                 | Risk Level | Recommendation                           |\n|--------|----------------------------------|------------|------------------------------------------|\n| 2.1    | Short termination notice period  | High       | Extend to 30 days                        |\n| 4.3    | Aggressive payment terms         | Medium     | Negotiate longer terms                   |\n| 7.2    | No liability cap                 | High       | Add liability cap and exclude indirects  |\n\n---\n\nPrepared by: [Legal Reviewer Name]\nReview Date: [Insert Date]\n\nNote: This report is a preliminary assessment. Final legal approval required before signing."
+  "content": "Contract Risk Review Report\n\nContract Name: [Insert Contract Name]\nContract Date: [Insert Date]\nParties Involved: [Party A] and [Party B]\n\n---\n\n## 1. Clause-by-Clause Risk Analysis\n\n### Clause 2.1 – Termination\n- **Identified Issue**: The termination notice period is unreasonably short (7 days).\n- **Risk Level**: High\n- **Recommendation**: Extend notice period to at least 30 days to allow sufficient operational transition.\n\n### Clause 4.3 – Payment Terms\n- **Identified Issue**: Payment due within 3 days with no grace period.\n- **Risk Level**: Medium\n- **Recommendation**: Negotiate a 15-day payment term with a 5-day grace period to reduce financial pressure.\n\n### Clause 7.2 – Limitation of Liability\n- **Identified Issue**: Unlimited liability for indirect damages.\n- **Risk Level**: High\n- **Recommendation**: Cap liability at the value of the contract and exclude indirect/consequential damages.\n\n---\n\n## 2. Summary of Key Risks\n| Clause | Issue Description                 | Risk Level | Recommendation                           |\n|--------|----------------------------------|------------|------------------------------------------|\n| 2.1    | Short termination notice period  | High       | Extend to 30 days                        |\n| 4.3    | Aggressive payment terms         | Medium     | Negotiate longer terms                   |\n| 7.2    | No liability cap                 | High       | Add liability cap and exclude indirects  |\n\n---\n\nPrepared by: [Legal Reviewer Name]\nReview Date: [Insert Date]\n\nNote: This report is a preliminary assessment. Final legal approval required before signing.",
+  "use_cases": [
+    "合同风险审查 合同审阅 风险评估"
+  ]
 }

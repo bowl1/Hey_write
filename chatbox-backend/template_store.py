@@ -173,7 +173,12 @@ def build_retrieval_text(template: dict[str, Any]) -> str:
 
 
 def tokenize(text: str) -> list[str]:
-    return re.findall(r"[a-zA-Z0-9]+", text.lower())
+    terms = re.findall(r"[a-zA-Z0-9]+", text.lower())
+    for segment in re.findall(r"[\u3400-\u9fff]+", text):
+        terms.extend(segment[index:index + 2] for index in range(len(segment) - 1))
+        if len(segment) == 1:
+            terms.append(segment)
+    return terms
 
 
 def bm25_scores(query: str, templates: list[dict[str, Any]]) -> tuple[dict[str, float], dict[str, list[str]]]:
@@ -371,6 +376,13 @@ def upsert_template_embedding(template: dict[str, Any]) -> None:
         )
 
 
+def hybrid_match_score(vector_score: float, keyword_score: float, has_keywords: bool) -> float:
+    if not has_keywords:
+        return vector_score
+    total = VECTOR_WEIGHT + BM25_WEIGHT
+    return (VECTOR_WEIGHT * vector_score + BM25_WEIGHT * keyword_score) / total if total > 0 else vector_score
+
+
 def search_templates_with_metadata(query: str, limit: int = 3) -> list[dict[str, Any]]:
     init_db()
     query_embedding = embed_text(query)
@@ -436,7 +448,8 @@ def search_templates_with_metadata(query: str, limit: int = 3) -> list[dict[str,
         vector_score = max(0.0, 1.0 - vector_distance) if vector_distance is not None else 0.0
         raw_bm25 = lexical_scores.get(template["id"], 0.0)
         normalized_bm25 = raw_bm25 / max_bm25 if max_bm25 else 0.0
-        final_score = VECTOR_WEIGHT * vector_score + BM25_WEIGHT * normalized_bm25
+        # Missing lexical evidence must not penalize queries in another language.
+        final_score = hybrid_match_score(vector_score, normalized_bm25, max_bm25 > 0)
         if template_id in vector_top_ids and template_id in lexical_top_ids:
             source = "hybrid"
         elif template_id in vector_top_ids:

@@ -1,7 +1,15 @@
 {
   "title": "Weekly Project Report",
-  "tags": ["project", "weekly report", "formal", "english"],
+  "tags": [
+    "project",
+    "weekly report",
+    "formal",
+    "english"
+  ],
   "style": "Formal",
   "language": "English",
-  "content": "**Weekly Project Report**\n\n**Project Name:** [Project Name]  \n**Reporting Period:** [Start Date] – [End Date]  \n**Prepared by:** [Your Name]  \n**Date:** [Submission Date]\n\n---\n\n**1. Highlights This Week**  \n- [Brief summary of key accomplishments and milestones achieved]\n- [Example: Completed Module A development and passed initial testing]\n\n**2. Tasks Completed**  \n- [Task 1: Description and status]\n- [Task 2: Description and status]\n\n**3. Ongoing Tasks**  \n- [Task 3: Description and expected completion time]\n- [Task 4: Description and dependencies/issues]\n\n**4. Issues & Risks**  \n- [Issue 1: Description and mitigation plan]\n- [Risk 1: Description and contingency approach]\n\n**5. Plans for Next Week**  \n- [Task 5: Description and priority]\n- [Any team coordination or resource needs]\n\n**6. Comments / Requests**  \n- [Optional notes to stakeholders or management]\n\n---\n\n*End of Report*"
+  "content": "**Weekly Project Report**\n\n**Project Name:** [Project Name]  \n**Reporting Period:** [Start Date] – [End Date]  \n**Prepared by:** [Your Name]  \n**Date:** [Submission Date]\n\n---\n\n**1. Highlights This Week**  \n- [Brief summary of key accomplishments and milestones achieved]\n- [Example: Completed Module A development and passed initial testing]\n\n**2. Tasks Completed**  \n- [Task 1: Description and status]\n- [Task 2: Description and status]\n\n**3. Ongoing Tasks**  \n- [Task 3: Description and expected completion time]\n- [Task 4: Description and dependencies/issues]\n\n**4. Issues & Risks**  \n- [Issue 1: Description and mitigation plan]\n- [Risk 1: Description and contingency approach]\n\n**5. Plans for Next Week**  \n- [Task 5: Description and priority]\n- [Any team coordination or resource needs]\n\n**6. Comments / Requests**  \n- [Optional notes to stakeholders or management]\n\n---\n\n*End of Report*",
+  "use_cases": [
+    "项目周报 工作周报 每周进度报告"
+  ]
 }

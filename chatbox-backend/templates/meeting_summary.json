@@ -2,6 +2,15 @@
   "title": "Weekly Project Sync Meeting Summary",
   "style": "Formal",
   "language": "English",
-  "tags": ["meeting", "summary", "project", "weekly", "status"],
-  "content": "🗓 Date: [Insert Meeting Date]  \n📍 Location: [Insert Location or 'Online']  \n👥 Attendees: [List Attendees, e.g., John, Sarah, etc.]  \n\n---\n\n### 1. Meeting Objective  \n[Insert main purpose or agenda of the meeting, e.g., Project Alpha weekly sync to discuss progress and blockers.]\n\n### 2. Key Updates  \n- **Team A**: [Insert key points or progress]  \n- **Team B**: [Insert key points or progress]  \n- **Client Feedback**: [Summarize any feedback or comments shared]\n\n### 3. Identified Issues / Blockers  \n- [Summarize any issues discussed]  \n- [Mention who is responsible for resolving them]\n\n### 4. Action Items  \n| Task | Owner | Deadline |\n|------|-------|----------|\n| [Action Item 1] | [Owner 1] | [Date] |\n| [Action Item 2] | [Owner 2] | [Date] |\n\n### 5. Next Meeting  \n🗓 Proposed Date: [Insert Proposed Date]  \n📌 Notes: [Optional notes or reminders]\n\n---\n\n📤 Document prepared by: [Your Name]  \n🕒 Time: [Insert Time of Writing]"
+  "tags": [
+    "meeting",
+    "summary",
+    "project",
+    "weekly",
+    "status"
+  ],
+  "content": "🗓 Date: [Insert Meeting Date]  \n📍 Location: [Insert Location or 'Online']  \n👥 Attendees: [List Attendees, e.g., John, Sarah, etc.]  \n\n---\n\n### 1. Meeting Objective  \n[Insert main purpose or agenda of the meeting, e.g., Project Alpha weekly sync to discuss progress and blockers.]\n\n### 2. Key Updates  \n- **Team A**: [Insert key points or progress]  \n- **Team B**: [Insert key points or progress]  \n- **Client Feedback**: [Summarize any feedback or comments shared]\n\n### 3. Identified Issues / Blockers  \n- [Summarize any issues discussed]  \n- [Mention who is responsible for resolving them]\n\n### 4. Action Items  \n| Task | Owner | Deadline |\n|------|-------|----------|\n| [Action Item 1] | [Owner 1] | [Date] |\n| [Action Item 2] | [Owner 2] | [Date] |\n\n### 5. Next Meeting  \n🗓 Proposed Date: [Insert Proposed Date]  \n📌 Notes: [Optional notes or reminders]\n\n---\n\n📤 Document prepared by: [Your Name]  \n🕒 Time: [Insert Time of Writing]",
+  "use_cases": [
+    "会议纪要 会议总结 讨论记录"
+  ]
 }

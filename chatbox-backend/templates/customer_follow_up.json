@@ -15,5 +15,8 @@
     "Closing"
   ],
   "content": "Subject: Next steps after [Meeting or conversation]\n\nHi [Customer name],\n\nThank you for discussing [Topic] with us. It was helpful to learn about [Customer priority].\n\n## What we discussed\n- [Key point one]\n- [Key point two]\n\n## Next steps\n1. [Action and owner]\n2. [Action and deadline]\n\nWould [Proposed date] work for our next conversation?\n\nBest,\n[Your name]",
-  "enabled": true
+  "enabled": true,
+  "use_cases": [
+    "客户跟进邮件 售后回访 跟进沟通"
+  ]
 }

@@ -1,7 +1,15 @@
 {
   "title": "Formal Meeting Invitation",
-  "tags": ["invitation", "meeting", "formal", "english"],
+  "tags": [
+    "invitation",
+    "meeting",
+    "formal",
+    "english"
+  ],
   "style": "Formal",
   "language": "English",
-  "content": "Subject: Invitation to [Meeting Topic] on [Date]\n\nDear [Recipient Name],\n\nI hope this message finds you well. \n\nI would like to cordially invite you to a meeting regarding [Brief Purpose, e.g., our Q3 marketing strategy / the upcoming product launch / the recent project updates], which is scheduled to take place on [Date] at [Time]. The meeting will be held at [Location or specify if online: Zoom / Microsoft Teams].\n\n**Agenda:**\n- [Agenda Item 1]\n- [Agenda Item 2]\n- [Optional: Any other relevant topics]\n\nYour input and presence would be greatly appreciated, as your expertise will be valuable to the discussion. Please confirm your availability by [RSVP Date], and let me know if you would like to propose any additional topics for the agenda.\n\nLooking forward to your participation.\n\nBest regards,\n\n[Your Name]  \n[Your Job Title / Department]  \n[Your Contact Info]"
+  "content": "Subject: Invitation to [Meeting Topic] on [Date]\n\nDear [Recipient Name],\n\nI hope this message finds you well. \n\nI would like to cordially invite you to a meeting regarding [Brief Purpose, e.g., our Q3 marketing strategy / the upcoming product launch / the recent project updates], which is scheduled to take place on [Date] at [Time]. The meeting will be held at [Location or specify if online: Zoom / Microsoft Teams].\n\n**Agenda:**\n- [Agenda Item 1]\n- [Agenda Item 2]\n- [Optional: Any other relevant topics]\n\nYour input and presence would be greatly appreciated, as your expertise will be valuable to the discussion. Please confirm your availability by [RSVP Date], and let me know if you would like to propose any additional topics for the agenda.\n\nLooking forward to your participation.\n\nBest regards,\n\n[Your Name]  \n[Your Job Title / Department]  \n[Your Contact Info]",
+  "use_cases": [
+    "会议邀请 邀请函 会议通知"
+  ]
 }

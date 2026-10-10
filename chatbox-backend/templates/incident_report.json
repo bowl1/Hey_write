@@ -16,5 +16,8 @@
     "Actions"
   ],
   "content": "# Incident report · [Incident title]\n\n**Date:** [Date]\n**Owner:** [Name]\n**Status:** [Investigating / Resolved]\n\n## Summary\n[What happened and how it was detected].\n\n## Impact\n[Who was affected, duration and measurable impact].\n\n## Timeline\n| Time | Event |\n| --- | --- |\n| [Time and time zone] | [Detection] |\n| [Time and time zone] | [Mitigation] |\n| [Time and time zone] | [Resolution] |\n\n## Cause and contributing factors\n[Confirmed findings; label unresolved questions clearly].\n\n## Follow-up actions\n- [Action] — [Owner], due [Date]\n- [Preventive measure] — [Owner], due [Date]",
-  "enabled": true
+  "enabled": true,
+  "use_cases": [
+    "事故报告 故障报告 事件复盘"
+  ]
 }
