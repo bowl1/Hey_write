@@ -744,7 +744,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
             </span>
           </DropdownHeader>
           {templateLibraryOpen && (
-            <TemplateList>
+            <TemplateList role="region" aria-label="Available templates" tabIndex={0}>
               {templates.length === 0 && (
                 <TemplateItem>
                   <h3>{templateStatus === "error" ? "Unable to load templates" : templateStatus === "loading" ? "Loading templates…" : "No templates available"}</h3>

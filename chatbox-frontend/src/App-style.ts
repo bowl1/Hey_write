@@ -842,12 +842,23 @@ export const TemplateList = styled.div`
   flex-direction: column;
   gap: 0.4rem;
   height: 320px;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 0.25rem;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #c9b9a6 transparent;
+  padding-right: 0.4rem;
+
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background: #c9b9a6; border-radius: 6px; }
+
+  &:focus-visible { outline: 2px solid ${clay}; outline-offset: 3px; }
 `;
 
 export const TemplateItem = styled.div`
+  flex-shrink: 0;
   border: 1px solid ${border};
   background: ${linen};
   border-radius: ${radiusMd};
@@ -858,7 +869,7 @@ export const TemplateRow = styled.button`
   width: 100%;
   border: 0;
   background: transparent;
-  padding: 0.55rem 0.7rem;
+  padding: 0.8rem 0.85rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -873,15 +884,21 @@ export const TemplateRow = styled.button`
     background: #fffaf3;
   }
 
+  &:focus-visible {
+    outline: 2px solid ${clay};
+    outline-offset: -2px;
+  }
+
   h3 {
     margin: 0;
     color: ${ink};
     font-size: 0.82rem;
     font-family: "Inter", sans-serif;
     font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    min-width: 0;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   span {
