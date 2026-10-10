@@ -10,8 +10,9 @@ jest.mock("./supabase", () => ({
 }));
 
 let authChanged;
-const Workspace = ({ userId, onSignOut }) => <div>
-  <span>Workspace {userId}</span><button onClick={onSignOut}>Sign out</button>
+const Workspace = ({ userId, onSignOut, onRequireAuth }) => <div>
+  <span>Workspace {userId || "guest"}</span><button onClick={onSignOut}>Sign out</button>
+  <button onClick={() => onRequireAuth({ action: "wild", intent: "write a note", style: "Formal", language: "English" })}>Generate</button>
 </div>;
 
 beforeEach(() => {
@@ -26,6 +27,9 @@ beforeEach(() => {
 test("signs in with email and password and opens the account workspace", async () => {
   supabase.auth.signInWithPassword.mockResolvedValue({ error: null });
   render(<Auth Workspace={Workspace} />);
+  expect(screen.getByText("Workspace guest")).toBeInTheDocument();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Generate" }));
   await screen.findByLabelText("Email");
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@example.com" } });
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });
@@ -35,24 +39,27 @@ test("signs in with email and password and opens the account workspace", async (
   expect(screen.getByText("Workspace account-a")).toBeInTheDocument();
   act(() => authChanged("SIGNED_OUT", null));
   expect(screen.queryByText("Workspace account-a")).not.toBeInTheDocument();
-  expect(screen.getByLabelText("Email")).toBeInTheDocument();
+  expect(screen.getByText("Workspace guest")).toBeInTheDocument();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
 
 test("registration asks the user to confirm their email", async () => {
   supabase.auth.signUp.mockResolvedValue({ error: null });
   render(<Auth Workspace={Workspace} />);
+  fireEvent.click(screen.getByRole("button", { name: "Generate" }));
   fireEvent.click(await screen.findByRole("button", { name: "Create an account" }));
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "b@example.com" } });
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });
   fireEvent.click(screen.getByRole("button", { name: "Create account" }));
   expect(await screen.findByText("Check your email to confirm your account, then sign in.")).toBeInTheDocument();
   expect(supabase.auth.signUp).toHaveBeenCalledWith(expect.objectContaining({ email: "b@example.com", password: "password123" }));
-  expect(screen.queryByText(/Workspace /)).not.toBeInTheDocument();
+  expect(screen.getByText("Workspace guest")).toBeInTheDocument();
 });
 
 test("shows login errors without opening a workspace", async () => {
   supabase.auth.signInWithPassword.mockResolvedValue({ error: new Error("Invalid login credentials") });
   render(<Auth Workspace={Workspace} />);
+  fireEvent.click(screen.getByRole("button", { name: "Generate" }));
   await screen.findByLabelText("Email");
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@example.com" } });
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });

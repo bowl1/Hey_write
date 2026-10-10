@@ -1049,6 +1049,36 @@ export const AuthCard = styled(ChatBox)`
   max-width: 440px;
 `;
 
+export const AuthDialog = styled.dialog`
+  width: calc(100% - 2rem);
+  max-width: 440px;
+  max-height: calc(100svh - 2rem);
+  overflow-y: auto;
+  padding: 2.75rem;
+  border: 1px solid ${border};
+  border-radius: 8px;
+  background: ${paper};
+  box-shadow: 0 16px 64px rgba(60, 40, 20, 0.2);
+
+  ${ModalCloseButton} {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 1.1rem;
+  }
+
+  &::backdrop {
+    background: rgba(28, 24, 21, 0.38);
+    backdrop-filter: blur(3px);
+  }
+
+  @media (max-width: 480px) {
+    padding: 2.5rem 1.5rem 1.75rem;
+  }
+`;
+
 export const AuthForm = styled(TemplateForm)`
   gap: 1.15rem;
 

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { apiFetch } from "./supabase";
 import Auth from "./Auth";
+import type { WorkspaceProps } from "./Auth";
 import {
   PageContainer,
   ChatBox,
@@ -266,11 +267,12 @@ const renderFormattedText = (text: string) => {
   return blocks;
 };
 
-export const Home: React.FC<{ userId: string; email?: string; onSignOut?: () => void }> = ({ userId, email, onSignOut }) => {
+export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onRequireAuth, pendingGeneration, onPendingHandled }) => {
   const SESSION_STORAGE_KEY = `heywrite.session_id:${userId}`;
-  const [intent, setIntent] = useState<string>("");
-  const [style, setStyle] = useState<string>("Formal");
-  const [language, setLanguage] = useState<string>("English");
+  const [intent, setIntent] = useState<string>(pendingGeneration?.intent || "");
+  const [style, setStyle] = useState<string>(pendingGeneration?.style || "Formal");
+  const [language, setLanguage] = useState<string>(pendingGeneration?.language || "English");
+  const pendingStarted = useRef(false);
   const [response, setResponse] = useState<string>("");
   const [lastResponse, setLastResponse] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -349,6 +351,7 @@ export const Home: React.FC<{ userId: string; email?: string; onSignOut?: () => 
   };
 
   const loadTemplates = async (force = false) => {
+    if (!userId) return;
     if (!force && process.env.NODE_ENV === "test") return;
     if (!BASE_URL && process.env.NODE_ENV === "production") return;
     try {
@@ -382,6 +385,7 @@ export const Home: React.FC<{ userId: string; email?: string; onSignOut?: () => 
   };
 
   const loadSessions = async () => {
+    if (!userId) return;
     if (!BASE_URL && process.env.NODE_ENV === "production") return;
     try {
       const res = await apiFetch(`${BASE_URL}/agent/sessions`);
@@ -394,6 +398,7 @@ export const Home: React.FC<{ userId: string; email?: string; onSignOut?: () => 
   };
 
   const restoreSessionById = async (targetSessionId: string) => {
+    if (!userId) return;
     if (!targetSessionId) return;
     if (!BASE_URL && process.env.NODE_ENV === "production") return;
 
@@ -419,18 +424,19 @@ export const Home: React.FC<{ userId: string; email?: string; onSignOut?: () => 
   };
 
   useEffect(() => {
+    if (!userId) return;
     const storedSessionId = window.localStorage.getItem(SESSION_STORAGE_KEY);
     loadTemplates();
     if (process.env.NODE_ENV !== "test" || storedSessionId) {
       loadSessions();
     }
-    restoreStoredSession();
+    if (!pendingGeneration) restoreStoredSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const resetConversation = () => {
     const nextSessionId = createSessionId();
-    window.localStorage.setItem(SESSION_STORAGE_KEY, nextSessionId);
+    if (userId) window.localStorage.setItem(SESSION_STORAGE_KEY, nextSessionId);
     setSessionId(nextSessionId);
     setActiveTemplateId(null);
     setResponse("");
@@ -444,6 +450,10 @@ export const Home: React.FC<{ userId: string; email?: string; onSignOut?: () => 
   const runAgent = async (action: AgentAction) => {
     if (!intent.trim()) return;
     if (action === "continue_editing" && !response.trim()) return;
+    if (!userId) {
+      onRequireAuth?.({ action, intent, style, language });
+      return;
+    }
     const previousResponse = response;
     const currentDraft = responseSections.draft || response;
     setLoading(true);
@@ -512,6 +522,15 @@ export const Home: React.FC<{ userId: string; email?: string; onSignOut?: () => 
     setHistory(newHistory);
   };
 
+  useEffect(() => {
+    if (!userId || !pendingGeneration || pendingStarted.current) return;
+    pendingStarted.current = true;
+    runAgent(pendingGeneration.action);
+    onPendingHandled?.();
+    // The queued request initializes this account's newly mounted workspace.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   const handleCopy = () => {
     if (cleanDraft) {
       navigator.clipboard.writeText(cleanDraft);
@@ -528,6 +547,7 @@ export const Home: React.FC<{ userId: string; email?: string; onSignOut?: () => 
       setTemplateMessage("Template title and content are required.");
       return;
     }
+    if (!userId) { onRequireAuth?.(); return; }
 
     setTemplateMessage("Saving template...");
     try {
@@ -704,7 +724,8 @@ export const Home: React.FC<{ userId: string; email?: string; onSignOut?: () => 
 
       <ChatBox>
         <Title>Hey Write!</Title>
-        <div>{email}<button type="button" onClick={onSignOut}>Sign out</button></div>
+        <div>{userId ? <>{email}<button type="button" onClick={onSignOut}>Sign out</button></> :
+          <button type="button" onClick={() => onRequireAuth?.()}>Sign in</button>}</div>
         <Subtitle>Write in your style — save templates, generate with them anytime.</Subtitle>
 
         <IntentTextarea

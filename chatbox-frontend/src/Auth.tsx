@@ -1,9 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import { AuthPage, AuthCard, AuthForm, AuthField, AuthFooter, AuthSwitchButton, AuthNotice, Title, Subtitle, TemplateInput, GenerateButton } from "./App-style";
+import { AuthDialog, AuthForm, AuthField, AuthFooter, AuthSwitchButton, AuthNotice, Title, Subtitle, TemplateInput, GenerateButton, ModalCloseButton } from "./App-style";
 
-export default function Auth({ Workspace }: { Workspace: React.ComponentType<{ userId: string; email?: string; onSignOut?: () => void }> }) {
+export type PendingGeneration = { action: "new_task" | "continue_editing" | "wild"; intent: string; style: string; language: string };
+export type WorkspaceProps = {
+  userId?: string; email?: string; onSignOut?: () => void;
+  onRequireAuth?: (request?: PendingGeneration) => void;
+  pendingGeneration?: PendingGeneration | null; onPendingHandled?: () => void;
+};
+
+export default function Auth({ Workspace }: { Workspace: React.ComponentType<WorkspaceProps> }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [email, setEmail] = useState("");
@@ -11,6 +18,14 @@ export default function Auth({ Workspace }: { Workspace: React.ComponentType<{ u
   const [signUp, setSignUp] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [open, setOpen] = useState(false);
+  const [pendingGeneration, setPendingGeneration] = useState<PendingGeneration | null>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    if (open && !session) dialog.current?.showModal();
+    else dialog.current?.close();
+  }, [open, session]);
 
   useEffect(() => {
     if (!supabase) { setReady(true); return; }
@@ -18,10 +33,10 @@ export default function Auth({ Workspace }: { Workspace: React.ComponentType<{ u
     let changed = false;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, next) => {
       changed = true;
-      if (active) { setSession(next); setReady(true); }
+      if (active) { setSession(next); setReady(true); if (next) setOpen(false); }
     });
     supabase.auth.getSession().then(({ data, error }) => {
-      if (active && !changed) { setSession(data.session); setReady(true); }
+      if (active && !changed) { setSession(data.session); setReady(true); if (data.session) setOpen(false); }
       if (active && error) setMessage("Unable to restore your session. Please sign in again.");
     }).catch(() => {
       if (active) { setReady(true); setMessage("Unable to restore your session."); }
@@ -50,14 +65,17 @@ export default function Auth({ Workspace }: { Workspace: React.ComponentType<{ u
     if (error) setMessage("Unable to sign out. Please try again.");
   }
 
-  if (!ready) return <p role="status">Loading your workspace…</p>;
-  if (session) return <>
-    {message && <p role="alert">{message}</p>}
-    <Workspace key={session.user.id} userId={session.user.id} email={session.user.email} onSignOut={signOut} />
-  </>;
-  return <AuthPage><AuthCard>
+  const closeDialog = () => { setOpen(false); setPendingGeneration(null); setPassword(""); setMessage(""); };
+  return <>
+    <Workspace key={session?.user.id || "guest"} userId={session?.user.id} email={session?.user.email} onSignOut={signOut}
+      onRequireAuth={request => { setPendingGeneration(request || null); setOpen(true); }}
+      pendingGeneration={session ? pendingGeneration : null} onPendingHandled={() => setPendingGeneration(null)} />
+    {session && message && <p role="alert">{message}</p>}
+    <AuthDialog ref={dialog} aria-label="Sign in to generate" onCancel={event => { event.preventDefault(); if (!busy) closeDialog(); }}>
+    <ModalCloseButton type="button" aria-label="Close sign-in" disabled={busy} onClick={closeDialog}>×</ModalCloseButton>
     <Title>Hey Write!</Title>
-    <Subtitle>{signUp ? "Create your private writing workspace." : "Sign in to your writing workspace."}</Subtitle>
+    <Subtitle>{signUp ? "Create your private writing workspace." : pendingGeneration ? "Sign in to start writing. Your request is saved." : "Sign in to your writing workspace."}</Subtitle>
+    {!ready && <p role="status">Checking your session…</p>}
     {!supabase ? <p role="alert">Sign-in is not configured. Please contact the workspace administrator.</p> : <>
       <AuthForm onSubmit={submit}>
         <AuthField>
@@ -79,5 +97,5 @@ export default function Auth({ Workspace }: { Workspace: React.ComponentType<{ u
       </AuthFooter>
     </>}
     {message && <AuthNotice role="status">{message}</AuthNotice>}
-  </AuthCard></AuthPage>;
+  </AuthDialog></>;
 }

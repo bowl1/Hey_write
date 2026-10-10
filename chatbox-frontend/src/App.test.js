@@ -13,6 +13,30 @@ beforeEach(() => {
   });
 });
 
+test("guests can explore the interface and generation requests sign-in without calling the API", () => {
+  global.fetch = jest.fn();
+  const requireAuth = jest.fn();
+  render(<Home onRequireAuth={requireAuth} />);
+  expect(screen.getByText("Generate with Template")).toBeInTheDocument();
+  const input = screen.getByPlaceholderText(/Summarize today's product sync meeting/);
+  fireEvent.change(input, { target: { value: "write a welcome note" } });
+  fireEvent.click(screen.getByRole("button", { name: /Generate something wild/ }));
+  expect(requireAuth).toHaveBeenCalledWith({ action: "wild", intent: "write a welcome note", style: "Formal", language: "English" });
+  expect(global.fetch).not.toHaveBeenCalled();
+  expect(input).toHaveValue("write a welcome note");
+});
+
+test("the queued guest request runs once after sign-in with its original input", async () => {
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ reply: "Welcome!", state: { session_id: "session-after-sign-in" } }) });
+  const handled = jest.fn();
+  render(<Home userId="test-user" pendingGeneration={{ action: "wild", intent: "write a welcome note", style: "Formal", language: "English" }} onPendingHandled={handled} />);
+  await screen.findByText("Welcome!");
+  const requests = global.fetch.mock.calls.filter(([url]) => String(url).endsWith("/agent/run"));
+  expect(requests).toHaveLength(1);
+  expect(JSON.parse(requests[0][1].body)).toEqual(expect.objectContaining({ action: "wild", intent: "write a welcome note" }));
+  expect(handled).toHaveBeenCalledTimes(1);
+});
+
 test("does not submit when input is empty", () => {
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
