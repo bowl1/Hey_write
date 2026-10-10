@@ -196,7 +196,22 @@ def list_session_summaries(limit: int = 20) -> list[dict[str, Any]]:
     return summaries
 
 
-def persist_agent_state(state: dict[str, Any]) -> None:
+def load_session_history(session_id: str, limit: int = 20) -> list[dict[str, str]]:
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT role, content FROM (
+                SELECT message_id, role, content FROM messages
+                WHERE session_id = %s
+                ORDER BY message_id DESC LIMIT %s
+            ) recent ORDER BY message_id ASC
+            """,
+            (session_id, limit),
+        ).fetchall()
+    return [{"role": row["role"], "content": row["content"]} for row in rows]
+
+
+def persist_agent_state(state: dict[str, Any]) -> dict[str, Any]:
     init_agent_db()
     session_id = state["session_id"]
     template_meta = state.get("template_meta") or {}
@@ -209,10 +224,11 @@ def persist_agent_state(state: dict[str, Any]) -> None:
         if not state.get("blocked_reason")
         else None
     )
-    current_draft = (
-        ""
-        if state.get("blocked_reason") == "no_template_match"
-        else state.get("reply") or state.get("current_draft") or ""
+    candidate_draft = state.get("reply") or ""
+    accepted = (
+        (state.get("evaluation") or {}).get("passed") is True
+        and not state.get("blocked_reason")
+        and bool(candidate_draft.strip())
     )
     input_state = {
         "action": state.get("action"),
@@ -221,36 +237,38 @@ def persist_agent_state(state: dict[str, Any]) -> None:
         "language": state.get("language"),
         "active_template_id": state.get("active_template_id"),
     }
-    output_state = {
-        "active_template_id": active_template_id,
-        "current_draft": current_draft,
-        "template_meta": template_meta,
-        "evaluation": state.get("evaluation") or {},
-        "blocked_reason": state.get("blocked_reason"),
-    }
-
     with get_connection() as conn:
-        conn.execute(
+        saved = conn.execute(
             """
             INSERT INTO agent_sessions (
                 session_id, active_template_id, current_draft, style, language
             )
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (%(session_id)s, %(template_id)s, %(draft)s, %(style)s, %(language)s)
             ON CONFLICT (session_id) DO UPDATE SET
-                active_template_id = EXCLUDED.active_template_id,
-                current_draft = EXCLUDED.current_draft,
-                style = EXCLUDED.style,
-                language = EXCLUDED.language,
+                active_template_id = CASE WHEN %(accepted)s THEN EXCLUDED.active_template_id ELSE agent_sessions.active_template_id END,
+                current_draft = CASE WHEN %(accepted)s THEN EXCLUDED.current_draft ELSE agent_sessions.current_draft END,
+                style = CASE WHEN %(accepted)s THEN EXCLUDED.style ELSE agent_sessions.style END,
+                language = CASE WHEN %(accepted)s THEN EXCLUDED.language ELSE agent_sessions.language END,
                 updated_at = now()
+            RETURNING active_template_id, current_draft
             """,
-            (
-                session_id,
-                active_template_id,
-                current_draft,
-                state.get("style") or "Formal",
-                state.get("language") or "English",
-            ),
-        )
+            {
+                "session_id": session_id,
+                "template_id": active_template_id if accepted else None,
+                "draft": candidate_draft if accepted else "",
+                "style": state.get("style") or "Formal",
+                "language": state.get("language") or "English",
+                "accepted": accepted,
+            },
+        ).fetchone()
+        output_state = {
+            **saved,
+            "draft_accepted": accepted,
+            "candidate_draft": candidate_draft,
+            "template_meta": template_meta,
+            "evaluation": state.get("evaluation") or {},
+            "blocked_reason": state.get("blocked_reason"),
+        }
         conn.execute(
             """
             INSERT INTO agent_runs (
@@ -268,7 +286,7 @@ def persist_agent_state(state: dict[str, Any]) -> None:
                 Jsonb(input_state),
                 Jsonb(output_state),
                 Jsonb(state.get("trace") or []),
-                current_draft,
+                candidate_draft,
             ),
         )
         if state.get("intent"):
@@ -276,8 +294,9 @@ def persist_agent_state(state: dict[str, Any]) -> None:
                 "INSERT INTO messages (session_id, role, content) VALUES (%s, %s, %s)",
                 (session_id, "user", state["intent"]),
             )
-        if current_draft:
+        if accepted:
             conn.execute(
                 "INSERT INTO messages (session_id, role, content) VALUES (%s, %s, %s)",
-                (session_id, "assistant", current_draft),
+                (session_id, "assistant", candidate_draft),
             )
+    return {**saved, "draft_accepted": accepted}

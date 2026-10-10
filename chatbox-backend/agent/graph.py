@@ -110,22 +110,15 @@ def run_agent(request: AgentRunRequest) -> dict:
     }
     final_state = writing_graph.invoke(initial_state, config=agent_run_config(initial_state))
     template_meta = final_state.get("template_meta") or {}
-    active_template_id = (
-        template_meta.get("selected_template_id")
-        if template_meta.get("used_template")
-        else None
-    ) or (
-        final_state.get("active_template_id")
-        if not final_state.get("blocked_reason")
-        else None
-    )
     return {
         "reply": final_state.get("reply", ""),
         "template_meta": template_meta,
         "evaluation": final_state.get("evaluation") or {},
         "state": {
             "session_id": session_id,
-            "active_template_id": active_template_id,
+            "active_template_id": final_state.get("active_template_id"),
+            "current_draft": final_state.get("current_draft", ""),
+            "draft_accepted": final_state.get("draft_accepted", False),
             "blocked_reason": final_state.get("blocked_reason"),
         },
         "trace": final_state.get("trace") or [],

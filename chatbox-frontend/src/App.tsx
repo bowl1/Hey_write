@@ -5,6 +5,9 @@ import type { WorkspaceProps } from "./Auth";
 import {
   PageContainer,
   ChatBox,
+  AccountBar,
+  AccountEmail,
+  AccountButton,
   Title,
   Subtitle,
   IntentTextarea,
@@ -122,6 +125,10 @@ const emptyTemplateForm = {
 };
 
 const HISTORY_WIDTH_STORAGE_KEY = "heywrite.history_width";
+
+const rejectedDraftNotice = (draft: string) => draft.trim()
+  ? "This attempt did not pass evaluation. Your last saved draft has been kept."
+  : "This attempt did not pass evaluation. No draft was saved.";
 
 const createSessionId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -286,6 +293,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
   );
   const [templates, setTemplates] = useState<Template[]>([]);
   const [templateMeta, setTemplateMeta] = useState<TemplateMeta | null>(null);
+  const [draftNotice, setDraftNotice] = useState("");
   const [agentEvaluation, setAgentEvaluation] =
     useState<AgentEvaluation | null>(null);
   const [historyWidth, setHistoryWidth] = useState<number>(() => {
@@ -373,8 +381,10 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
     setSessionId(nextSessionId);
     setExpandedSessionId(nextSessionId);
     setActiveTemplateId(session.active_template_id || null);
-    setResponse(session.current_draft || lastRun.reply || "");
-    setLastResponse(session.current_draft || lastRun.reply || "");
+    const savedDraft = session.current_draft ?? outputState.current_draft ?? "";
+    setResponse(savedDraft);
+    setLastResponse(savedDraft);
+    setDraftNotice(outputState.draft_accepted === false ? rejectedDraftNotice(savedDraft) : "");
     setStyle(session.style || "Formal");
     setLanguage(session.language || "English");
     setHistory(data.messages || []);
@@ -445,6 +455,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
     setTemplateMeta(null);
     setAgentEvaluation(null);
     setAgentTrace([]);
+    setDraftNotice("");
   };
 
   const runAgent = async (action: AgentAction) => {
@@ -483,7 +494,10 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
       if (!res.ok)
         throw new Error(`Server returned ${res.status}: ${await res.text()}`);
       const data = await res.json();
-      setResponse(data.reply || "");
+      const accepted = data.state?.draft_accepted !== false;
+      const savedDraft = data.state?.current_draft ?? previousResponse;
+      setResponse(accepted ? data.reply || "" : savedDraft);
+      setDraftNotice(accepted ? "" : rejectedDraftNotice(savedDraft));
       setTemplateMeta(data.template_meta || null);
       setAgentEvaluation(data.evaluation || null);
       setAgentTrace(data.trace || []);
@@ -496,7 +510,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
       setHistory((prev) => [
         ...prev,
         { role: "user", content: intent },
-        { role: "assistant", content: data.reply || "" },
+        ...(accepted ? [{ role: "assistant" as const, content: data.reply || "" }] : []),
       ]);
       if (process.env.NODE_ENV !== "test") {
         loadSessions();
@@ -723,9 +737,17 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
       </SideStack>
 
       <ChatBox>
+        <AccountBar>
+          {userId && <AccountEmail title={email}>{email}</AccountEmail>}
+          <AccountButton type="button" onClick={userId ? onSignOut : () => onRequireAuth?.()}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="8" r="3.5" />
+              <path d="M5 20v-1a7 7 0 0 1 14 0v1" />
+            </svg>
+            {userId ? "Sign out" : "Sign in"}
+          </AccountButton>
+        </AccountBar>
         <Title>Hey Write!</Title>
-        <div>{userId ? <>{email}<button type="button" onClick={onSignOut}>Sign out</button></> :
-          <button type="button" onClick={() => onRequireAuth?.()}>Sign in</button>}</div>
         <Subtitle>Write in your style — save templates, generate with them anytime.</Subtitle>
 
         <IntentTextarea
@@ -787,6 +809,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
           </GenerateButton>
         </GenerateButtons>
 
+        {draftNotice && <p role="status">{draftNotice}</p>}
         {hasAgentResult && (
           <ResponseBox>
             {response && <ResponseTitle>Your Draft</ResponseTitle>}

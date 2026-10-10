@@ -50,7 +50,7 @@ class ObservabilityTests(unittest.TestCase):
             )
             try:
                 with patch("agent.nodes.load_session", return_value=None), \
-                     patch("agent.nodes.persist_agent_state"), \
+                     patch("agent.nodes.persist_agent_state", return_value={"draft_accepted": True}), \
                      patch("agent.nodes.get_llm_chain", return_value=chain), \
                      patch.dict(os.environ, {"AGENT_LLM_EVALUATOR_ENABLED": "false"}):
                     result = run_agent(AgentRunRequest(

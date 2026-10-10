@@ -171,6 +171,10 @@ The evaluator combines deterministic guardrails with optional LLM-as-judge:
 - LLM-as-judge handles semantic checks such as whether the user request was actually completed and whether the revision stayed on scope.
 - If the evaluator fails, the graph performs one `revise_with_feedback` retry before persisting the final result.
 
+Generation, revisions, and the LLM evaluator receive bounded conversation context: up to 20 recent user/assistant messages, 4,000 characters per message, and 12,000 content characters total. Existing sessions load their history from the tenant's database instead of trusting the client copy. The latest request overrides conflicting older instructions.
+
+Only nonempty drafts that pass evaluation and are not blocked update the saved draft and active template. Failed candidates remain in `agent_runs` for inspection, while the previous valid draft and its settings are preserved. Rejected candidates do not enter the assistant conversation memory. The API reports `state.draft_accepted` and `state.current_draft`; the UI retains the saved draft and explains a rejected attempt, including after reopening the session.
+
 Run eval cases:
 
 ```bash

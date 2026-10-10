@@ -66,6 +66,61 @@ export const ChatBox = styled.div`
 
 // ─── Title ────────────────────────────────────────────────────────────────────
 
+export const AccountBar = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid ${border};
+`;
+
+export const AccountEmail = styled.span`
+  min-width: 0;
+  max-width: 26ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #6f6258;
+  font-family: "Inter", sans-serif;
+  font-size: 0.78rem;
+`;
+
+export const AccountButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.55rem 1rem;
+  border: 1px solid #d8b8a3;
+  border-radius: ${radiusMd};
+  background: #fffaf3;
+  color: ${clayDk};
+  font-family: "Inter", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+  svg { width: 16px; height: 16px; }
+
+  &:hover {
+    background: ${clayDk};
+    border-color: ${clayDk};
+    color: ${paper};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${clay};
+    outline-offset: 3px;
+  }
+`;
+
 export const Title = styled.h1`
   font-family: "Playfair Display", Georgia, serif;
   font-size: 2.4rem;

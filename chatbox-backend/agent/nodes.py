@@ -5,7 +5,8 @@ from template_store import MIN_MATCH_SCORE, get_template, search_templates_with_
 
 from .evaluator import evaluate_agent_output
 from .state import WritingAgentState
-from .store import load_session, persist_agent_state
+from .store import load_session, load_session_history, persist_agent_state
+from .memory import conversation_context
 
 
 def append_trace(state: WritingAgentState, node: str, **data) -> list[dict]:
@@ -25,6 +26,8 @@ def load_session_node(state: WritingAgentState) -> WritingAgentState:
     if session:
         updates["active_template_id"] = state.get("active_template_id") or session.get("active_template_id")
         updates["current_draft"] = state.get("current_draft") or session.get("current_draft") or ""
+        updates["previous_draft"] = updates["current_draft"]
+        updates["history"] = load_session_history(state["session_id"])
     return updates
 
 
@@ -135,6 +138,7 @@ def generate_draft_node(state: WritingAgentState) -> WritingAgentState:
     result = get_llm_chain().run(
         {
             "intent": state.get("intent", ""),
+            "history": conversation_context(state),
             "style": state.get("style") or "Formal",
             "language": state.get("language") or "English",
             "context": context,
@@ -201,6 +205,7 @@ def revise_draft_node(state: WritingAgentState) -> WritingAgentState:
     result = get_llm_chain().run(
         {
             "intent": state.get("intent", ""),
+            "history": conversation_context(state),
             "style": state.get("style") or "Formal",
             "language": state.get("language") or "English",
             "context": active_template.get("content", "") if active_template else "",
@@ -232,6 +237,7 @@ def generate_wild_node(state: WritingAgentState) -> WritingAgentState:
     result = get_llm_chain().run(
         {
             "intent": state.get("intent", ""),
+            "history": conversation_context(state),
             "style": state.get("style") or "Formal",
             "language": state.get("language") or "English",
             "context": "",
@@ -384,6 +390,7 @@ def revise_with_feedback_node(state: WritingAgentState) -> WritingAgentState:
                 "Revise the current draft only enough to satisfy the evaluator. "
                 "Keep the same template behavior and include a Changes section."
             ),
+            "history": conversation_context(state),
             "style": state.get("style") or "Formal",
             "language": state.get("language") or "English",
             "context": context,
@@ -403,8 +410,9 @@ def revise_with_feedback_node(state: WritingAgentState) -> WritingAgentState:
 
 
 def persist_state_node(state: WritingAgentState) -> WritingAgentState:
-    persist_agent_state(state)
+    saved = persist_agent_state(state)
     return {
+        **saved,
         "trace": append_trace(
             state,
             "persist_state",

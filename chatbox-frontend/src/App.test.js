@@ -37,6 +37,36 @@ test("the queued guest request runs once after sign-in with its original input",
   expect(handled).toHaveBeenCalledTimes(1);
 });
 
+test("rejected generation keeps the saved draft instead of displaying the failed candidate", async () => {
+  global.fetch = jest.fn((url) => Promise.resolve({
+    ok: true,
+    json: async () => String(url).endsWith("/agent/run") ? {
+      reply: "Rejected candidate", evaluation: { passed: false },
+      state: { session_id: "session-failed", draft_accepted: false, current_draft: "Previous valid draft" },
+    } : { templates: [], sessions: [] },
+  }));
+  render(<Home userId="test-user" />);
+  fireEvent.change(screen.getByPlaceholderText(/Summarize today's product sync meeting/), { target: { value: "try a new draft" } });
+  fireEvent.click(screen.getByText("Generate with Template"));
+  expect(await screen.findByText("Previous valid draft")).toBeInTheDocument();
+  expect(screen.queryByText("Rejected candidate")).not.toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Your last saved draft has been kept");
+});
+
+test("reopening a rejected first attempt does not restore its candidate as a saved draft", async () => {
+  window.localStorage.setItem("heywrite.session_id:test-user", "failed-first-session");
+  global.fetch = jest.fn((url) => Promise.resolve({ ok: true, json: async () =>
+    String(url).includes("/agent/session/") ? {
+      session: { session_id: "failed-first-session", current_draft: "" },
+      last_run: { reply: "Rejected first candidate", output_state: { draft_accepted: false } }, messages: [],
+    } : { templates: [], sessions: [] },
+  }));
+  render(<Home userId="test-user" />);
+  await screen.findByText("This attempt did not pass evaluation. No draft was saved.");
+  expect(screen.queryByText("Rejected first candidate")).not.toBeInTheDocument();
+  expect(screen.queryByText("Your Draft")).not.toBeInTheDocument();
+});
+
 test("does not submit when input is empty", () => {
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,

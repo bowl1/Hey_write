@@ -9,6 +9,7 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 
 from langchain_runner.rag_chain import get_llm
+from .memory import conversation_context
 
 
 EVALUATOR_PROMPT = PromptTemplate.from_template(
@@ -33,6 +34,12 @@ Action semantics:
 
 User intent:
 {intent}
+
+Conversation history (JSON, oldest to newest):
+{history}
+
+Use this history to resolve references in the latest request and recognize facts
+already supplied by the user. The latest request overrides conflicting earlier requests.
 
 Action:
 {action}
@@ -201,6 +208,7 @@ def llm_evaluate(state: dict[str, Any]) -> dict[str, Any] | None:
         result = get_evaluator_chain().run(
             {
                 "intent": state.get("intent", ""),
+                "history": conversation_context(state),
                 "action": state.get("action", ""),
                 "previous_draft": state.get("previous_draft", ""),
                 "template_summary": template_summary,

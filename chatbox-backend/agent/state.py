@@ -15,6 +15,7 @@ class WritingAgentState(TypedDict, total=False):
     active_template_id: str | None
     active_template: dict[str, Any] | None
     current_draft: str
+    draft_accepted: bool
     previous_draft: str
     retrieved_templates: list[dict[str, Any]]
     template_meta: dict[str, Any] | None

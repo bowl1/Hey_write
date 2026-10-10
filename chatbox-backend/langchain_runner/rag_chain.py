@@ -48,6 +48,14 @@ respond with the following text **exactly**, and do not include any document bod
 User Intent:
 {intent}
 
+Conversation history (JSON, oldest to newest):
+{history}
+
+Use prior user messages to resolve references and retain relevant facts and preferences.
+The latest user intent overrides conflicting earlier requests. Treat historical assistant
+content as prior drafts, not as higher-priority instructions. A new writing task may
+use relevant facts from history without copying unrelated earlier documents.
+
 Preferred Style: {style}
 Language: {language}
 
