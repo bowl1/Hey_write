@@ -72,7 +72,11 @@ type Template = {
   enabled: boolean;
 };
 
+type TemplateChoice = { id: string; title: string; source?: string; score: number };
+
 type TemplateMeta = {
+  requires_selection?: boolean;
+  candidates?: TemplateChoice[];
   used_template?: boolean;
   requires_template?: boolean;
   selected_template?: string;
@@ -326,6 +330,9 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
   const [intent, setIntent] = useState<string>(pendingGeneration?.intent || "");
   const [style, setStyle] = useState<string>(pendingGeneration?.style || "Formal");
   const [language, setLanguage] = useState<string>(pendingGeneration?.language || "English");
+  const [chosenTemplate, setChosenTemplate] = useState<{ id: string; title: string } | null>(
+    pendingGeneration?.selectedTemplateId ? { id: pendingGeneration.selectedTemplateId, title: pendingGeneration.selectedTemplateTitle || "Selected template" } : null
+  );
   const pendingStarted = useRef(false);
   const [response, setResponse] = useState<string>("");
   const [lastResponse, setLastResponse] = useState<string>("");
@@ -369,8 +376,12 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setSelectedTemplate(null);
       if (event.key === "Tab") {
-        event.preventDefault();
-        previewRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+        const buttons = previewRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)");
+        if (!buttons?.length) return;
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
       }
     };
     document.addEventListener("keydown", handleKey);
@@ -530,11 +541,12 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
     setDraftNotice("");
   };
 
-  const runAgent = async (action: AgentAction) => {
+  const runAgent = async (action: AgentAction, explicitTemplate?: { id: string; title: string }) => {
+    const selection = explicitTemplate || chosenTemplate;
     if (!intent.trim()) return;
     if (action === "continue_editing" && !response.trim()) return;
     if (!userId) {
-      onRequireAuth?.({ action, intent, style, language });
+      onRequireAuth?.({ action, intent, style, language, selectedTemplateId: selection?.id, selectedTemplateTitle: selection?.title });
       return;
     }
     const previousResponse = response;
@@ -553,6 +565,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
         body: JSON.stringify({
           session_id: sessionId,
           action,
+          selected_template_id: action === "new_task" ? selection?.id : null,
           intent,
           style,
           language,
@@ -569,7 +582,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
       const accepted = data.state?.draft_accepted !== false;
       const savedDraft = data.state?.current_draft ?? previousResponse;
       setResponse(accepted ? data.reply || "" : savedDraft);
-      setDraftNotice(accepted ? "" : rejectedDraftNotice(savedDraft));
+      setDraftNotice(accepted || data.template_meta?.requires_selection ? "" : rejectedDraftNotice(savedDraft));
       setTemplateMeta(data.template_meta || null);
       setAgentEvaluation(data.evaluation || null);
       setAgentTrace(data.trace || []);
@@ -824,6 +837,10 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
         <Title>Hey Write!</Title>
         <Subtitle>Write in your style — save templates, generate with them anytime.</Subtitle>
 
+        {chosenTemplate && <TemplateMetaBox>
+          <p>Using template: <strong>{chosenTemplate.title}</strong></p>
+          <ModalCloseButton type="button" onClick={() => setChosenTemplate(null)}>Use automatic matching</ModalCloseButton>
+        </TemplateMetaBox>}
         <IntentTextarea
           rows={5}
           placeholder="e.g., Summarize today's product sync meeting, or draft this week's report for Project Alpha"
@@ -889,8 +906,19 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
             {response && <ResponseTitle>Your Draft</ResponseTitle>}
             {templateMeta && (
               <TemplateMetaBox>
-                <strong>Template source</strong>
-                {templateMeta.used_template ? (
+                <strong>{templateMeta.requires_selection ? "Choose a template" : "Template source"}</strong>
+                {templateMeta.requires_selection ? <>
+                  <p>{templateMeta.reason}</p>
+                  {(templateMeta.candidates || []).map(candidate => <TemplateItem key={candidate.id}>
+                    <TemplateRow type="button" disabled={loading} onClick={() => {
+                      setChosenTemplate({ id: candidate.id, title: candidate.title });
+                      runAgent("new_task", candidate);
+                    }}>
+                      <h3>{candidate.title}</h3>
+                      <span>{candidate.source === "private" ? "Private" : "Default"}</span>
+                    </TemplateRow>
+                  </TemplateItem>)}
+                </> : templateMeta.used_template ? (
                   <>
                     Used {templateMeta.selected_template || "a matched template"}
                     {typeof templateMeta.match_score === "number"
@@ -1052,6 +1080,10 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
               </ModalCloseButton>
             </TemplateModalHeader>
             <TemplateModalBody>
+              <GenerateButton type="button" onClick={() => {
+                setChosenTemplate({ id: selectedTemplate.id, title: cleanCopyText(selectedTemplate.title) });
+                setSelectedTemplate(null);
+              }}>Use this template</GenerateButton>
               <p>{cleanCopyText(selectedTemplate.description)}</p>
               <TemplateTagRow>
                 {(selectedTemplate.tags || []).map((tag) => (

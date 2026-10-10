@@ -95,6 +95,7 @@ def run_agent(request: AgentRunRequest) -> dict:
         "current_draft": request.current_draft,
         "previous_draft": request.current_draft,
         "active_template_id": request.active_template_id,
+        "selected_template_id": request.selected_template_id,
         "steps": 0,
         "max_steps": 5,
         "retry_count": 0,

@@ -16,6 +16,7 @@ class AgentRunRequest(BaseModel):
     language: str = "English"
     history: list[AgentMessage] = []
     current_draft: str = ""
+    selected_template_id: str | None = None
     active_template_id: str | None = None
 
 

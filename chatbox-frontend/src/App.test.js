@@ -452,6 +452,11 @@ test("cleans markdown markers in template library and template modal", async () 
   expect(screen.getByText("Value")).toBeInTheDocument();
   expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
   expect(screen.queryByText(/\*Customer\*/)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Use this template" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.getByText(/Using template:/)).toHaveTextContent("Customer Follow-up");
+  fireEvent.click(screen.getByRole("button", { name: "Use automatic matching" }));
+  expect(screen.queryByText(/Using template:/)).not.toBeInTheDocument();
 });
 
 test("resizes conversation history with the drag handle", () => {
@@ -563,4 +568,35 @@ test("continues editing the current draft without retrieving a new template", as
   expect(lastAgentRunOptions.body).toContain(
     '"active_template_id":"meeting_invitation"'
   );
+});
+
+
+test("close matches wait for user selection and send the chosen template", async () => {
+  const bodies = [];
+  global.fetch = jest.fn((url, options) => {
+    if (!String(url).endsWith("/agent/run")) return Promise.resolve({ ok: true, json: async () => ({ sessions: [], templates: [] }) });
+    bodies.push(JSON.parse(options.body));
+    return Promise.resolve({ ok: true, json: async () => bodies.length === 1 ? {
+      reply: "", state: { session_id: "choice-session", draft_accepted: false, current_draft: "" },
+      template_meta: { requires_selection: true, reason: "Choose one", candidates: [
+        { id: "private-a", title: "Personal invitation", source: "private", score: .85 },
+        { id: "private-b", title: "Team invitation", source: "private", score: .82 },
+      ] },
+    } : { reply: "Selected draft", state: { session_id: "choice-session", draft_accepted: true } } });
+  });
+  render(<Home userId="test-user" />);
+  fireEvent.change(screen.getByPlaceholderText(/Summarize today's product sync meeting/), { target: { value: "invite my team" } });
+  fireEvent.click(screen.getByRole("button", { name: "Generate with Template" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Team invitation Private" }));
+  expect(await screen.findByText("Selected draft")).toBeInTheDocument();
+  expect(bodies).toHaveLength(2);
+  expect(bodies[1].selected_template_id).toBe("private-b");
+});
+
+test("a selected template survives sign-in and is sent with the queued request", async () => {
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ reply: "Manual draft", state: {} }) });
+  render(<Home userId="test-user" pendingGeneration={{ action: "new_task", intent: "write an invitation", style: "Formal", language: "English", selectedTemplateId: "default:meeting", selectedTemplateTitle: "Meeting" }} />);
+  expect(await screen.findByText("Manual draft")).toBeInTheDocument();
+  const request = global.fetch.mock.calls.find(([url]) => String(url).endsWith("/agent/run"));
+  expect(JSON.parse(request[1].body).selected_template_id).toBe("default:meeting");
 });

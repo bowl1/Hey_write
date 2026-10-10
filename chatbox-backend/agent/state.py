@@ -12,6 +12,7 @@ class WritingAgentState(TypedDict, total=False):
     style: str
     language: str
     history: list[dict[str, str]]
+    selected_template_id: str | None
     active_template_id: str | None
     active_template: dict[str, Any] | None
     current_draft: str

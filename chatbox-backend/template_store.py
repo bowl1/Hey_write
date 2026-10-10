@@ -26,6 +26,7 @@ EMBEDDING_MODEL = os.getenv("TEMPLATE_EMBEDDING_MODEL", "text-embedding-3-small"
 EMBEDDING_DIMENSION = int(os.getenv("TEMPLATE_EMBEDDING_DIMENSION", "1536"))
 VECTOR_WEIGHT = float(os.getenv("TEMPLATE_VECTOR_WEIGHT", "0.7"))
 BM25_WEIGHT = float(os.getenv("TEMPLATE_BM25_WEIGHT", "0.3"))
+TEMPLATE_CHOICE_SCORE_GAP = float(os.getenv("TEMPLATE_CHOICE_SCORE_GAP", "0.05"))
 MIN_MATCH_SCORE = float(os.getenv("TEMPLATE_MIN_MATCH_SCORE", "0.65"))
 RETRIEVAL_CANDIDATE_LIMIT = int(os.getenv("TEMPLATE_RETRIEVAL_CANDIDATE_LIMIT", "20"))
 
@@ -376,6 +377,14 @@ def upsert_template_embedding(template: dict[str, Any]) -> None:
         )
 
 
+def prioritize_template_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(candidates, key=lambda item: (
+        item["final_score"] >= MIN_MATCH_SCORE,
+        item["template"].get("source") == "private" if item["final_score"] >= MIN_MATCH_SCORE else False,
+        item["final_score"],
+    ), reverse=True)
+
+
 def hybrid_match_score(vector_score: float, keyword_score: float, has_keywords: bool) -> float:
     if not has_keywords:
         return vector_score
@@ -470,7 +479,7 @@ def search_templates_with_metadata(query: str, limit: int = 3) -> list[dict[str,
                 "matched_terms": matched_terms.get(template["id"], []),
             }
         )
-    ranked.sort(key=lambda item: item["final_score"], reverse=True)
+    ranked = prioritize_template_candidates(ranked)
     return ranked[:limit]
 
 

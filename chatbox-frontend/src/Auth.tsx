@@ -3,7 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { AuthDialog, AuthForm, AuthField, AuthFooter, AuthSwitchButton, AuthNotice, Title, Subtitle, TemplateInput, GenerateButton, ModalCloseButton } from "./App-style";
 
-export type PendingGeneration = { action: "new_task" | "continue_editing" | "wild"; intent: string; style: string; language: string };
+export type PendingGeneration = { action: "new_task" | "continue_editing" | "wild"; intent: string; style: string; language: string; selectedTemplateId?: string; selectedTemplateTitle?: string };
 export type WorkspaceProps = {
   userId?: string; email?: string; onSignOut?: () => void;
   onRequireAuth?: (request?: PendingGeneration) => void;
