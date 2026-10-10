@@ -1036,6 +1036,106 @@ export const TemplateInput = styled.input`
   }
 `;
 
+// Authentication uses the same warm palette with a quieter secondary action.
+export const AuthPage = styled.main`
+  min-height: 100vh;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+`;
+
+export const AuthCard = styled(ChatBox)`
+  max-width: 440px;
+`;
+
+export const AuthForm = styled(TemplateForm)`
+  gap: 1.15rem;
+
+  ${GenerateButton} {
+    margin-top: 0.25rem;
+    min-height: 46px;
+
+    &:focus-visible {
+      outline: 2px solid ${clayDk};
+      outline-offset: 3px;
+    }
+  }
+`;
+
+export const AuthField = styled.div`
+  display: grid;
+  gap: 0.5rem;
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: ${body};
+  }
+
+  ${TemplateInput} {
+    min-height: 44px;
+    border-radius: ${radiusSm};
+  }
+`;
+
+export const AuthFooter = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.15rem 0.35rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid ${border};
+  color: #6f6258;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  text-align: center;
+`;
+
+export const AuthSwitchButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.5rem 0.65rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: ${radiusSm};
+  font: inherit;
+  font-weight: 600;
+  color: ${clayDk};
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #fdf1ea;
+    color: ${ink};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${clay};
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+export const AuthNotice = styled.p`
+  margin: 1.25rem 0 0;
+  padding: 0.8rem 1rem;
+  background: ${linen};
+  border-radius: ${radiusSm};
+  color: ${body};
+  font-size: 0.82rem;
+  line-height: 1.6;
+`;
+
 export const TemplateTextarea = styled.textarea`
   width: 100%;
   box-sizing: border-box;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import { ChatBox, Title, Subtitle, TemplateForm, TemplateInput, GenerateButton } from "./App-style";
+import { AuthPage, AuthCard, AuthForm, AuthField, AuthFooter, AuthSwitchButton, AuthNotice, Title, Subtitle, TemplateInput, GenerateButton } from "./App-style";
 
 export default function Auth({ Workspace }: { Workspace: React.ComponentType<{ userId: string; email?: string; onSignOut?: () => void }> }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -55,19 +55,29 @@ export default function Auth({ Workspace }: { Workspace: React.ComponentType<{ u
     {message && <p role="alert">{message}</p>}
     <Workspace key={session.user.id} userId={session.user.id} email={session.user.email} onSignOut={signOut} />
   </>;
-  return <ChatBox style={{ maxWidth: 440, margin: "64px auto" }}>
+  return <AuthPage><AuthCard>
     <Title>Hey Write!</Title>
     <Subtitle>{signUp ? "Create your private writing workspace." : "Sign in to your writing workspace."}</Subtitle>
     {!supabase ? <p role="alert">Sign-in is not configured. Please contact the workspace administrator.</p> : <>
-      <TemplateForm onSubmit={submit}>
-        <label htmlFor="auth-email">Email</label>
-        <TemplateInput id="auth-email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} />
-        <label htmlFor="auth-password">Password</label>
-        <TemplateInput id="auth-password" type="password" autoComplete={signUp ? "new-password" : "current-password"} minLength={6} required value={password} onChange={e => setPassword(e.target.value)} />
+      <AuthForm onSubmit={submit}>
+        <AuthField>
+          <label htmlFor="auth-email">Email</label>
+          <TemplateInput id="auth-email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} />
+        </AuthField>
+        <AuthField>
+          <label htmlFor="auth-password">Password</label>
+          <TemplateInput id="auth-password" type="password" autoComplete={signUp ? "new-password" : "current-password"} minLength={6} required value={password} onChange={e => setPassword(e.target.value)} />
+        </AuthField>
         <GenerateButton disabled={busy} type="submit">{busy ? "Please wait…" : signUp ? "Create account" : "Sign in"}</GenerateButton>
-      </TemplateForm>
-      <button type="button" disabled={busy} onClick={() => { setSignUp(!signUp); setMessage(""); }}>{signUp ? "Already have an account? Sign in" : "Create an account"}</button>
+      </AuthForm>
+      <AuthFooter>
+        <span>{signUp ? "Already have an account?" : "New to Hey Write?"}</span>
+        <AuthSwitchButton type="button" disabled={busy} onClick={() => { setSignUp(!signUp); setMessage(""); }}>
+          {signUp ? "Sign in" : "Create an account"}
+          <span aria-hidden="true">→</span>
+        </AuthSwitchButton>
+      </AuthFooter>
     </>}
-    {message && <p role="status">{message}</p>}
-  </ChatBox>;
+    {message && <AuthNotice role="status">{message}</AuthNotice>}
+  </AuthCard></AuthPage>;
 }
