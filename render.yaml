@@ -5,7 +5,8 @@ services:
     dockerfilePath: ./chatbox-backend/dockerfile
     dockerContext: ./chatbox-backend
     plan: free
-    autoDeploy: false
+    branch: master
+    autoDeployTrigger: commit
     envVars:
       - key: DEEPSEEK_API_KEY
         sync: false
