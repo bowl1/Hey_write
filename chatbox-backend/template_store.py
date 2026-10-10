@@ -2,10 +2,13 @@ import json
 import math
 import os
 import re
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 
 import psycopg
+from psycopg import sql
+from tenancy import tenant_id, tenant_schema
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from psycopg.rows import dict_row
@@ -36,7 +39,14 @@ def get_database_url() -> str:
 
 
 def get_connection():
-    return psycopg.connect(get_database_url(), row_factory=dict_row)
+    schema = tenant_schema(tenant_id())
+    conn = psycopg.connect(get_database_url(), row_factory=dict_row)
+    try:
+        conn.execute(sql.SQL("SET LOCAL search_path TO {}, pg_catalog").format(sql.Identifier(schema)))
+        return conn
+    except Exception:
+        conn.close()
+        raise
 
 
 def get_embedding_client():
@@ -203,10 +213,10 @@ def bm25_scores(query: str, templates: list[dict[str, Any]]) -> tuple[dict[str, 
     return scores, matched_terms
 
 
-def init_db() -> None:
-    with get_connection() as conn:
+def init_db(connection=None) -> None:
+    with (nullcontext(connection) if connection is not None else get_connection()) as conn:
         with conn.cursor() as cur:
-            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public")
             cur.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS templates (
@@ -222,7 +232,7 @@ def init_db() -> None:
                     content text NOT NULL DEFAULT '',
                     enabled boolean NOT NULL DEFAULT true,
                     version integer NOT NULL DEFAULT 1,
-                    embedding vector({EMBEDDING_DIMENSION}),
+                    embedding public.vector({EMBEDDING_DIMENSION}),
                     embedding_text text,
                     embedding_model text,
                     embedding_updated_at timestamptz,
@@ -237,7 +247,7 @@ def init_db() -> None:
             cur.execute(
                 """
                 CREATE INDEX IF NOT EXISTS templates_embedding_idx
-                ON templates USING ivfflat (embedding vector_cosine_ops)
+                ON templates USING ivfflat (embedding public.vector_cosine_ops)
                 WITH (lists = 100)
                 """
             )
@@ -346,7 +356,7 @@ def upsert_template_embedding(template: dict[str, Any]) -> None:
         conn.execute(
             """
             UPDATE templates
-            SET embedding = %s::vector,
+            SET embedding = %s::public.vector,
                 embedding_text = %s,
                 embedding_model = %s,
                 embedding_updated_at = now(),
@@ -366,10 +376,10 @@ def search_templates_with_metadata(query: str, limit: int = 3) -> list[dict[str,
             """
             SELECT id, title, category, description, tags, style, language,
                    use_cases, structure, content, enabled, version, created_at, updated_at,
-                   embedding <=> %s::vector AS distance
+                   embedding OPERATOR(public.<=>) %s::public.vector AS distance
             FROM templates
             WHERE enabled = true AND embedding IS NOT NULL
-            ORDER BY embedding <=> %s::vector
+            ORDER BY embedding OPERATOR(public.<=>) %s::public.vector
             LIMIT %s
             """,
             (query_vector, query_vector, candidate_limit),

@@ -1,5 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import Home from "./App";
+import { Home } from "./App";
+
+jest.mock("./supabase", () => ({ apiFetch: (...args) => fetch(...args) }));
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -17,7 +19,7 @@ test("does not submit when input is empty", () => {
     json: async () => ({ templates: [] }),
   });
 
-  render(<Home />);
+  render(<Home userId="test-user" />);
   const generateButton = screen.getByText("Generate with Template");
   fireEvent.click(generateButton);
 
@@ -66,7 +68,7 @@ test("shows response after clicking generate button", async () => {
     });
   });
 
-  render(<Home />);
+  render(<Home userId="test-user" />);
 
   const textarea = screen.getByPlaceholderText(/summarize today's product sync/i);
   fireEvent.change(textarea, {
@@ -98,7 +100,7 @@ test("shows response after clicking generate button", async () => {
   expect(await screen.findByTestId("agent-evaluation")).toHaveTextContent(
     "Evaluator passed"
   );
-  expect(window.localStorage.getItem("heywrite.session_id")).toBe("session-1");
+  expect(window.localStorage.getItem("heywrite.session_id:test-user")).toBe("session-1");
 });
 
 test("does not show a draft when no template match clears the threshold", async () => {
@@ -147,7 +149,7 @@ test("does not show a draft when no template match clears the threshold", async 
     });
   });
 
-  render(<Home />);
+  render(<Home userId="test-user" />);
 
   fireEvent.change(screen.getByPlaceholderText(/summarize today's product sync/i), {
     target: { value: "Write an unrelated template request" },
@@ -161,7 +163,7 @@ test("does not show a draft when no template match clears the threshold", async 
 });
 
 test("restores the previous session from local storage", async () => {
-  window.localStorage.setItem("heywrite.session_id", "session-restore");
+  window.localStorage.setItem("heywrite.session_id:test-user", "session-restore");
   global.fetch = jest.fn((url) => {
     const requestUrl = String(url);
     if (requestUrl.includes("/agent/sessions")) {
@@ -225,7 +227,7 @@ test("restores the previous session from local storage", async () => {
     return Promise.reject(new Error(`Unexpected URL: ${requestUrl}`));
   });
 
-  render(<Home />);
+  render(<Home userId="test-user" />);
 
   expect(await screen.findByTestId("main-reply")).toHaveTextContent(
     "Restored draft body"
@@ -244,7 +246,7 @@ test("restores the previous session from local storage", async () => {
 });
 
 test("reset conversation starts a new current session without clearing saved sessions", async () => {
-  window.localStorage.setItem("heywrite.session_id", "session-old");
+  window.localStorage.setItem("heywrite.session_id:test-user", "session-old");
   const agentRunBodies = [];
 
   global.fetch = jest.fn((url, options = {}) => {
@@ -307,7 +309,7 @@ test("reset conversation starts a new current session without clearing saved ses
     return Promise.reject(new Error(`Unexpected URL: ${requestUrl}`));
   });
 
-  render(<Home />);
+  render(<Home userId="test-user" />);
 
   expect(await screen.findByTestId("main-reply")).toHaveTextContent("Old draft");
   expect(await screen.findByTestId("session-list")).toHaveTextContent(
@@ -320,7 +322,7 @@ test("reset conversation starts a new current session without clearing saved ses
     "Old saved session"
   );
 
-  const nextSessionId = window.localStorage.getItem("heywrite.session_id");
+  const nextSessionId = window.localStorage.getItem("heywrite.session_id:test-user");
   expect(nextSessionId).toBeTruthy();
   expect(nextSessionId).not.toBe("session-old");
 
@@ -366,7 +368,7 @@ test("cleans markdown markers in template library and template modal", async () 
     return Promise.reject(new Error(`Unexpected URL: ${requestUrl}`));
   });
 
-  render(<Home />);
+  render(<Home userId="test-user" />);
 
   fireEvent.click(screen.getByText(/template library/i));
   const templateRow = await screen.findByText("Customer Follow-up");
@@ -397,7 +399,7 @@ test("resizes conversation history with the drag handle", () => {
     });
   });
 
-  render(<Home />);
+  render(<Home userId="test-user" />);
 
   const handle = screen.getByLabelText("Resize conversation history");
   fireEvent.mouseDown(handle, { clientX: 900 });
@@ -464,7 +466,7 @@ test("continues editing the current draft without retrieving a new template", as
     return Promise.reject(new Error(`Unexpected URL: ${requestUrl}`));
   });
 
-  render(<Home />);
+  render(<Home userId="test-user" />);
 
   const textarea = screen.getByPlaceholderText(/summarize today's product sync/i);
   fireEvent.change(textarea, {

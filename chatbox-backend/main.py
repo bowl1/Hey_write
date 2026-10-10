@@ -2,16 +2,47 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 import logging
 from agent import AgentRunRequest, run_agent
 from agent.store import list_session_summaries, load_session_snapshot
 from template_store import list_templates, get_template, save_template, upsert_template_embedding
+from observability import shutdown_observability
+from tenancy import authenticate, tenant_context, tenant_id, ensure_workspace
+from starlette.concurrency import run_in_threadpool
+from starlette.responses import JSONResponse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 load_dotenv()
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        yield
+    finally:
+        shutdown_observability()
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@app.middleware("http")
+async def tenant_middleware(request, call_next):
+    if request.method == "OPTIONS" or request.url.path == "/health":
+        return await call_next(request)
+    try:
+        user = await authenticate(request.headers.get("authorization"))
+    except HTTPException as exc:
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code, headers=exc.headers)
+    with tenant_context(user["id"]):
+        request.state.user = user
+        try:
+            await run_in_threadpool(ensure_workspace)
+        except Exception:
+            logger.error("Workspace provisioning failed", exc_info=True)
+            return JSONResponse({"detail": "Workspace unavailable"}, status_code=503)
+        return await call_next(request)
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,6 +50,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/workspace")
+def workspace():
+    return {"tenant_id": tenant_id()}
 
 
 class TemplateCreateRequest(BaseModel):

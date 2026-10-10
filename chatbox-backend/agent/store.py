@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 from typing import Any
+from contextlib import nullcontext
 
 from psycopg.types.json import Jsonb
 
 from template_store import get_connection, init_db as init_template_db
 
 
-def init_agent_db() -> None:
-    init_template_db()
-    with get_connection() as conn:
+def init_agent_db(connection=None) -> None:
+    init_template_db(connection=connection)
+    with (nullcontext(connection) if connection is not None else get_connection()) as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -147,9 +148,9 @@ def list_session_summaries(limit: int = 20) -> list[dict[str, Any]]:
             SELECT session_id, active_template_id, current_draft, style, language,
                    created_at, updated_at
             FROM agent_sessions
-            WHERE session_id NOT LIKE 'eval-%'
-              AND session_id NOT LIKE 'test-%'
-              AND session_id NOT LIKE 'smoke-%'
+            WHERE session_id NOT LIKE 'eval-%%'
+              AND session_id NOT LIKE 'test-%%'
+              AND session_id NOT LIKE 'smoke-%%'
             ORDER BY updated_at DESC
             LIMIT %s
             """,

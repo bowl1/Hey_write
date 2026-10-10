@@ -4,6 +4,7 @@ AgentAction = Literal["new_task", "continue_editing", "wild"]
 
 
 class WritingAgentState(TypedDict, total=False):
+    tenant_id: str
     session_id: str
     run_id: str
     action: AgentAction

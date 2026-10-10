@@ -8,3 +8,5 @@ langchain-deepseek<1.0
 langgraph==1.0.1
 psycopg[binary]
 pgvector
+langfuse>=4.17,<5
+httpx>=0.27,<1

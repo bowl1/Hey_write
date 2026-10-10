@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -96,8 +97,11 @@ def evaluate_case(client: TestClient, case: dict) -> dict:
 
 
 def main_eval():
-    client = TestClient(main.app)
-    results = [evaluate_case(client, case) for case in load_cases()]
+    token = os.getenv("EVAL_ACCESS_TOKEN")
+    if not token:
+        raise SystemExit("Set EVAL_ACCESS_TOKEN to a signed-in Supabase user's access token")
+    with TestClient(main.app, headers={"Authorization": f"Bearer {token}"}) as client:
+        results = [evaluate_case(client, case) for case in load_cases()]
     print(json.dumps(results, indent=2))
     if not all(result["passed"] for result in results):
         raise SystemExit(1)

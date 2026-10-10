@@ -1,4 +1,5 @@
 import sys
+import argparse
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -8,6 +9,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from template_store import init_db, reindex_templates, seed_templates_from_files
+from tenancy import tenant_context, ensure_workspace
 
 load_dotenv()
 
@@ -28,4 +30,9 @@ def build_if_missing(force: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    build_if_missing(force=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tenant", required=True, help="Supabase Auth user UUID")
+    args = parser.parse_args()
+    with tenant_context(args.tenant):
+        ensure_workspace()
+        build_if_missing(force=True)

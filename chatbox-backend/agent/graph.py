@@ -3,6 +3,8 @@ from __future__ import annotations
 from uuid import uuid4
 
 from langgraph.graph import END, StateGraph
+from observability import agent_run_config
+from tenancy import tenant_id
 
 from .nodes import (
     evaluator_node,
@@ -79,6 +81,7 @@ writing_graph = build_graph()
 def run_agent(request: AgentRunRequest) -> dict:
     session_id = request.session_id or str(uuid4())
     initial_state: WritingAgentState = {
+        "tenant_id": tenant_id(),
         "session_id": session_id,
         "run_id": str(uuid4()),
         "action": request.action,
@@ -105,7 +108,7 @@ def run_agent(request: AgentRunRequest) -> dict:
             }
         ],
     }
-    final_state = writing_graph.invoke(initial_state)
+    final_state = writing_graph.invoke(initial_state, config=agent_run_config(initial_state))
     template_meta = final_state.get("template_meta") or {}
     active_template_id = (
         template_meta.get("selected_template_id")

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { apiFetch } from "./supabase";
+import Auth from "./Auth";
 import {
   PageContainer,
   ChatBox,
@@ -118,7 +120,6 @@ const emptyTemplateForm = {
   content: "",
 };
 
-const SESSION_STORAGE_KEY = "heywrite.session_id";
 const HISTORY_WIDTH_STORAGE_KEY = "heywrite.history_width";
 
 const createSessionId = () =>
@@ -265,7 +266,8 @@ const renderFormattedText = (text: string) => {
   return blocks;
 };
 
-const Home: React.FC = () => {
+export const Home: React.FC<{ userId: string; email?: string; onSignOut?: () => void }> = ({ userId, email, onSignOut }) => {
+  const SESSION_STORAGE_KEY = `heywrite.session_id:${userId}`;
   const [intent, setIntent] = useState<string>("");
   const [style, setStyle] = useState<string>("Formal");
   const [language, setLanguage] = useState<string>("English");
@@ -350,7 +352,7 @@ const Home: React.FC = () => {
     if (!force && process.env.NODE_ENV === "test") return;
     if (!BASE_URL && process.env.NODE_ENV === "production") return;
     try {
-      const res = await fetch(`${BASE_URL}/templates`);
+      const res = await apiFetch(`${BASE_URL}/templates`);
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const data = await res.json();
       setTemplates(data.templates || []);
@@ -382,7 +384,7 @@ const Home: React.FC = () => {
   const loadSessions = async () => {
     if (!BASE_URL && process.env.NODE_ENV === "production") return;
     try {
-      const res = await fetch(`${BASE_URL}/agent/sessions`);
+      const res = await apiFetch(`${BASE_URL}/agent/sessions`);
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const data = await res.json();
       setSessions(data.sessions || []);
@@ -396,7 +398,7 @@ const Home: React.FC = () => {
     if (!BASE_URL && process.env.NODE_ENV === "production") return;
 
     try {
-      const res = await fetch(`${BASE_URL}/agent/session/${targetSessionId}`);
+      const res = await apiFetch(`${BASE_URL}/agent/session/${encodeURIComponent(targetSessionId)}`);
       if (res.status === 404) {
         if (targetSessionId === window.localStorage.getItem(SESSION_STORAGE_KEY)) {
           window.localStorage.removeItem(SESSION_STORAGE_KEY);
@@ -452,7 +454,7 @@ const Home: React.FC = () => {
     setAgentTrace([]);
 
     try {
-      const res = await fetch(`${BASE_URL}/agent/run`, {
+      const res = await apiFetch(`${BASE_URL}/agent/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -529,7 +531,7 @@ const Home: React.FC = () => {
 
     setTemplateMessage("Saving template...");
     try {
-      const res = await fetch(`${BASE_URL}/templates`, {
+      const res = await apiFetch(`${BASE_URL}/templates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -702,6 +704,7 @@ const Home: React.FC = () => {
 
       <ChatBox>
         <Title>Hey Write!</Title>
+        <div>{email}<button type="button" onClick={onSignOut}>Sign out</button></div>
         <Subtitle>Write in your style — save templates, generate with them anytime.</Subtitle>
 
         <IntentTextarea
@@ -946,4 +949,6 @@ const Home: React.FC = () => {
   );
 };
 
-export default Home;
+export default function App() {
+  return <Auth Workspace={Home} />;
+}

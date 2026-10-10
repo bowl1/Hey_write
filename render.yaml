@@ -13,5 +13,15 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
+      - key: LANGFUSE_BASE_URL
+        value: "https://cloud.langfuse.com"
       - key: AGENT_LLM_EVALUATOR_ENABLED
         value: "true"

@@ -73,7 +73,7 @@ To initialize the `vector` extension, create template indexes, seed bundled JSON
 
 ```bash
 cd chatbox-backend
-./.venv/bin/python langchain_runner/build_vectorstore.py
+./.venv/bin/python langchain_runner/build_vectorstore.py --tenant YOUR_SUPABASE_USER_UUID
 ```
 
 
@@ -175,7 +175,78 @@ Run eval cases:
 
 ```bash
 cd chatbox-backend
-./.venv/bin/python tests/evals/run_writing_agent_eval.py
+EVAL_ACCESS_TOKEN="your-user-access-token" ./.venv/bin/python tests/evals/run_writing_agent_eval.py
+```
+
+## Account workspaces and Supabase email authentication
+
+Each confirmed Supabase email account owns one private workspace. This implements account-level multi-tenancy; shared organization membership and invitations are not included. The frontend supports email/password registration, email confirmation, sign-in, automatic token refresh, and sign-out using the [Supabase Auth SDK](https://supabase.com/docs/guides/auth/passwords).
+
+Set backend environment variables (root `.env` locally, Render environment in production):
+
+```dotenv
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
+```
+
+Set frontend variables in `chatbox-frontend/.env` locally and Vercel's build environment in production:
+
+```dotenv
+REACT_APP_SUPABASE_URL=https://your-project.supabase.co
+REACT_APP_SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
+REACT_APP_API_URL=https://your-backend.example.com
+```
+
+Use the same Supabase project for Auth and `DATABASE_URL`. Only the publishable/anon key belongs in the frontend; never use service-role or secret keys. Enable Email authentication and set Site URL plus allowed redirect URLs to the local/frontend site addresses in Supabase Authentication settings. Rebuild the frontend and restart the backend after configuration changes.
+
+All application endpoints require `Authorization: Bearer <access_token>`; `/health` is public. The backend validates the token with the configured project's `/auth/v1/user` endpoint, requires a confirmed email, and derives the workspace from that user's UUID. Request bodies and tenant headers cannot select another workspace. Authentication configuration or service failures deny access.
+
+The first authenticated request provisions `tenant_<user_uuid_without_hyphens>`. Each workspace has its own `templates` (including vectors), `agent_sessions`, `agent_runs`, and `messages`. Database connections use only that schema and `pg_catalog` in their search path; pgvector types/operators are explicitly qualified. There is no fallback to legacy `public` tables. Browser session IDs and Langfuse session groups are scoped to the account. New workspaces start with an empty template library; users can create templates through the UI, or an administrator can seed the bundled templates:
+
+```bash
+cd chatbox-backend
+./.venv/bin/python manage_workspace.py --user-id USER_UUID --seed-templates
+```
+
+Existing `public` data is preserved and is not automatically assigned to new users. After registering and confirming the intended owner, explicitly copy the old data into their empty workspace:
+
+```bash
+./.venv/bin/python manage_workspace.py --user-id OWNER_USER_UUID --copy-legacy
+```
+
+This copies all four tables atomically, preserves IDs and embeddings, leaves the originals untouched, and refuses to overwrite a nonempty workspace. The database connection is a trusted backend/admin credential. Tenant schemas must stay outside Supabase's exposed Data API schemas; direct database credentials are not issued to clients.
+
+Validation:
+
+```bash
+cd chatbox-backend
+./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+# Optional real PostgreSQL test; all test schemas/data are rolled back:
+RUN_DB_TESTS=1 ./.venv/bin/python -m unittest discover -s tests -p 'test_tenancy_db.py'
+```
+
+## Langfuse tracing
+
+The backend uses the [official LangChain/LangGraph callback integration](https://langfuse.com/integrations/frameworks/langchain) with Langfuse Python SDK v4. Each `/agent/run` produces a `heywrite-agent` trace containing graph nodes, nested model calls, evaluation output, and retries. Traces are grouped by the existing session ID and include the database `run_id` for correlation. LLM observations capture token usage and latency when reported by the model provider.
+
+Install the backend requirements, then add project keys from Langfuse Settings to the root `.env` (or `chatbox-backend/.env`):
+
+```dotenv
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_BASE_URL=https://cloud.langfuse.com
+LANGFUSE_TRACING_ENABLED=true
+```
+
+Use the URL shown in your project's settings for your region or self-hosted instance. Configure the same variables in Render for the deployed backend. Restart the backend after changing configuration, generate a draft, then inspect Traces and Sessions in Langfuse.
+
+Without both keys, tracing is disabled automatically. Set `LANGFUSE_TRACING_ENABLED=false` to disable it explicitly. Tracing records prompts, conversation history, drafts, and graph state in the configured Langfuse project. Delivery is asynchronous, and the backend drains pending events on graceful shutdown. Template embedding calls are direct SDK calls and are not captured as separate model observations by this graph callback.
+
+Run the offline integration checks (no database, model API, or Langfuse network calls):
+
+```bash
+cd chatbox-backend
+./.venv/bin/python -m unittest discover -s tests -p 'test_observability.py'
 ```
 
 ## 🖥️ Local Run
@@ -221,4 +292,3 @@ Stop:
 
 
 ---
-
