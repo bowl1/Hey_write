@@ -1,9 +1,9 @@
+import hashlib
 import json
 import math
 import os
 import re
 from contextlib import nullcontext
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -412,8 +412,9 @@ def search_templates_with_metadata(query: str, limit: int = 3) -> list[dict[str,
 
     public_templates = list_public_templates()
     public_distances = {}
+    public_vectors = load_public_template_vectors(public_templates)
     for template in public_templates:
-        vector = public_template_embedding(build_embedding_text(template), EMBEDDING_MODEL)
+        vector = public_vectors[template["id"]]
         if len(vector) != len(query_embedding):
             raise ValueError("Default template embedding dimension does not match query")
         norm = math.sqrt(sum(value * value for value in vector) * sum(value * value for value in query_embedding))
@@ -490,10 +491,37 @@ def list_public_templates() -> list[dict[str, Any]]:
     return templates
 
 
-@lru_cache(maxsize=128)
-def public_template_embedding(text: str, model: str) -> list[float]:
-    # Public content only; cache is shared safely across account workspaces.
-    return embed_text(text)
+def load_public_template_vectors(templates: list[dict[str, Any]]) -> dict[str, list[float]]:
+    """Persist only trusted bundled content; never cache private templates here."""
+    texts = {template["id"]: build_embedding_text(template) for template in templates}
+    hashes = {key: hashlib.sha256(text.encode()).hexdigest() for key, text in texts.items()}
+    vectors = {}
+    with get_connection() as conn:
+        # Serialize cold-cache fills across workers and tenants.
+        conn.execute("SELECT pg_advisory_xact_lock(hashtext('heywrite-public-template-vectors'))")
+        conn.execute("""CREATE TABLE IF NOT EXISTS public.heywrite_default_template_vectors (
+            template_id text NOT NULL, content_hash text NOT NULL, model text NOT NULL,
+            dimension integer NOT NULL, embedding jsonb NOT NULL,
+            PRIMARY KEY (template_id, content_hash, model, dimension)
+        )""")
+        rows = conn.execute("""SELECT template_id, content_hash, embedding
+            FROM public.heywrite_default_template_vectors WHERE model = %s AND dimension = %s""",
+            (EMBEDDING_MODEL, EMBEDDING_DIMENSION)).fetchall()
+        for row in rows:
+            if hashes.get(row["template_id"]) == row["content_hash"]:
+                vectors[row["template_id"]] = row["embedding"]
+        missing = [key for key in texts if key not in vectors]
+        if missing:
+            batch = get_embedding_client().embed_documents([texts[key] for key in missing])
+            if len(batch) != len(missing) or any(len(vector) != EMBEDDING_DIMENSION for vector in batch):
+                raise ValueError("Default template embedding batch has invalid dimensions")
+            for key, vector in zip(missing, batch):
+                conn.execute("""INSERT INTO public.heywrite_default_template_vectors
+                    (template_id, content_hash, model, dimension, embedding)
+                    VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING""",
+                    (key, hashes[key], EMBEDDING_MODEL, EMBEDDING_DIMENSION, Jsonb(vector)))
+                vectors[key] = vector
+    return vectors
 
 
 def seed_templates_from_files(embed: bool = True, overwrite: bool = False) -> int:

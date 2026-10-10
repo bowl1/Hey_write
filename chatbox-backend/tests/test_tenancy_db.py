@@ -3,7 +3,7 @@
 import os
 import unittest
 from contextlib import nullcontext
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import psycopg
@@ -40,7 +40,7 @@ class DatabaseIsolationTests(unittest.TestCase):
                         self.assertEqual(next(template for template in listed if template["id"] == "same")["content"], f"private {index}")
                         self.assertTrue(any(template["id"].startswith("default:") for template in listed))
                         template = template_store.get_template("same")
-                        with patch("template_store.embed_text", return_value=vector):
+                        with patch("template_store.embed_text", return_value=vector), patch("template_store.get_embedding_client", return_value=Mock(embed_documents=lambda texts: [vector for _ in texts])):
                             template_store.upsert_template_embedding(template)
                             hits = template_store.search_templates_with_metadata("private")
                         private_hits = [hit for hit in hits if not hit["template"]["id"].startswith("default:")]
