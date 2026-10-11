@@ -26,3 +26,5 @@ services:
         value: "https://cloud.langfuse.com"
       - key: AGENT_LLM_EVALUATOR_ENABLED
         value: "true"
+      - key: TEMPLATE_MIN_MATCH_SCORE
+        value: "0.60"
