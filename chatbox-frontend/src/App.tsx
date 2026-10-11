@@ -394,6 +394,23 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+  const highlightedTemplateId = chosenTemplate?.id || activeTemplateId;
+  const templateListRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (highlightedTemplateId) setTemplateLibraryOpen(true);
+  }, [highlightedTemplateId]);
+  useEffect(() => {
+    const list = templateListRef.current;
+    if (!list || !highlightedTemplateId) return;
+    const row = Array.from(list.querySelectorAll<HTMLButtonElement>("button[data-template-id]"))
+      .find(button => button.dataset.templateId === highlightedTemplateId);
+    if (!row) return;
+    const bounds = list.getBoundingClientRect();
+    const item = row.getBoundingClientRect();
+    if (item.top < bounds.top) list.scrollTop += item.top - bounds.top;
+    else if (item.bottom > bounds.bottom) list.scrollTop += item.bottom - bounds.bottom;
+  }, [highlightedTemplateId, templates, templateLibraryOpen]);
+
   const [agentTrace, setAgentTrace] = useState<AgentTraceItem[]>([]);
 
   const BASE_URL =
@@ -532,6 +549,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
     if (userId) window.localStorage.setItem(SESSION_STORAGE_KEY, nextSessionId);
     setSessionId(nextSessionId);
     setActiveTemplateId(null);
+    setChosenTemplate(null);
     setResponse("");
     setLastResponse("");
     setHistory([]);
@@ -767,7 +785,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
             </span>
           </DropdownHeader>
           {templateLibraryOpen && (
-            <TemplateList role="region" aria-label="Available templates" tabIndex={0}>
+            <TemplateList ref={templateListRef} role="region" aria-label="Available templates" tabIndex={0}>
               {templates.length === 0 && (
                 <TemplateItem>
                   <h3>{templateStatus === "error" ? "Unable to load templates" : templateStatus === "loading" ? "Loading templates…" : "No templates available"}</h3>
@@ -778,10 +796,14 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
                 <TemplateItem key={template.id}>
                   <TemplateRow
                     type="button"
+                    data-template-id={template.id}
+                    aria-pressed={template.id === highlightedTemplateId}
                     onClick={() => setSelectedTemplate(template)}
                   >
                     <h3>{cleanCopyText(template.title)}</h3>
-                    {template.source === "default" && <TemplateTag>Default</TemplateTag>}
+                    {template.id === highlightedTemplateId
+                      ? <TemplateTag>Selected</TemplateTag>
+                      : template.source === "default" && <TemplateTag>Default</TemplateTag>}
                   </TemplateRow>
                 </TemplateItem>
               ))}

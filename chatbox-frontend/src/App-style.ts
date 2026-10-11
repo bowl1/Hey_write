@@ -888,6 +888,13 @@ export const TemplateRow = styled.button`
     background: #fffaf3;
   }
 
+  &[aria-pressed="true"] {
+    background: #f8e9db;
+    box-shadow: inset 3px 0 0 ${clay};
+    h3 { color: ${clayDk}; }
+    span { color: ${clayDk}; }
+  }
+
   &:focus-visible {
     outline: 2px solid ${clay};
     outline-offset: -2px;

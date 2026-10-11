@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { Home } from "./App";
 
 jest.mock("./supabase", () => ({ apiFetch: (...args) => fetch(...args) }));
@@ -455,6 +455,7 @@ test("cleans markdown markers in template library and template modal", async () 
   fireEvent.click(screen.getByRole("button", { name: "Use this template" }));
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(screen.getByText(/Using template:/)).toHaveTextContent("Customer Follow-up");
+  expect(within(screen.getByRole("region", { name: "Available templates" })).getByRole("button", { name: "Customer Follow-up Selected" })).toHaveAttribute("aria-pressed", "true");
   fireEvent.click(screen.getByRole("button", { name: "Use automatic matching" }));
   expect(screen.queryByText(/Using template:/)).not.toBeInTheDocument();
 });
@@ -599,4 +600,28 @@ test("a selected template survives sign-in and is sent with the queued request",
   expect(await screen.findByText("Manual draft")).toBeInTheDocument();
   const request = global.fetch.mock.calls.find(([url]) => String(url).endsWith("/agent/run"));
   expect(JSON.parse(request[1].body).selected_template_id).toBe("default:meeting");
+});
+
+
+test("automatic matching opens the library and highlights only the active template", async () => {
+  global.fetch = jest.fn((url) => Promise.resolve({ ok: true, json: async () => {
+    if (String(url).endsWith("/templates")) return { templates: [
+      { id: "default:a", title: "Meeting", source: "default", tags: [], content: "Meeting content" },
+      { id: "default:b", title: "Report", source: "default", tags: [], content: "Report content" },
+    ] };
+    if (String(url).endsWith("/agent/run")) return { reply: "A report draft", state: { active_template_id: "default:b", draft_accepted: true } };
+    return { sessions: [] };
+  } }));
+  render(<Home userId="test-user" />);
+  fireEvent.click(screen.getByRole("button", { name: /Template Library/ }));
+  await screen.findByText("Report");
+  fireEvent.click(screen.getByRole("button", { name: /Template Library/ }));
+  fireEvent.change(screen.getByPlaceholderText(/Summarize today's product sync meeting/), { target: { value: "write a report" } });
+  fireEvent.click(screen.getByRole("button", { name: "Generate with Template" }));
+  await screen.findByText("A report draft");
+  const library = await screen.findByRole("region", { name: "Available templates" });
+  expect(within(library).getByRole("button", { name: "Report Selected" })).toHaveAttribute("aria-pressed", "true");
+  expect(within(library).getByRole("button", { name: "Meeting Default" })).toHaveAttribute("aria-pressed", "false");
+  fireEvent.click(screen.getByRole("button", { name: /Reset/ }));
+  expect(within(library).getByRole("button", { name: "Report Default" })).toHaveAttribute("aria-pressed", "false");
 });
