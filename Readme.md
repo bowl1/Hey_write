@@ -174,19 +174,31 @@ Evaluation and local test sessions using prefixes such as `eval-`, `test-`, and 
 
 Each response includes `reply`, `template_meta`, `evaluation`, `state`, and `trace` so the UI can show which template was used, why it was used, what the agent did, and whether the output passed evaluator checks.
 
-Evaluator checks:
+## 🛡️ Eval & Guardrails
 
-- Preserves original structure when revising an existing draft.
-- Completes the user's request.
-- Uses the correct template behavior for the selected action.
-- Includes a `Changes` section.
-- Avoids obvious unrelated fabrication.
+### Eval: assess each generated draft
 
-The evaluator combines deterministic guardrails with optional LLM-as-judge:
+Every generated or revised draft is evaluated before it becomes the saved result. The evaluator combines deterministic checks with an optional LLM judge, enabled by default through `AGENT_LLM_EVALUATOR_ENABLED=true`.
 
-- Deterministic checks handle hard constraints such as `Changes`, template action behavior, and explicitly requested names or numbers.
-- LLM-as-judge handles semantic checks such as whether the user request was actually completed and whether the revision stayed on scope.
-- If the evaluator fails, the graph performs one `revise_with_feedback` retry before persisting the final result.
+| Check | Deterministic guardrail | LLM judge |
+| --- | --- | --- |
+| Preserve revision structure | Compare detected headings, or use a line-count heuristic | Assess whether the revision stays on scope |
+| Complete the request | Require a nonempty draft and extracted required terms | Assess semantic request fulfillment |
+| Follow template behavior | Check selected-template metadata and action trace | Final decision uses the deterministic check |
+| Include changes | Require a `Changes:` section | Final decision uses the deterministic check |
+| Avoid unrelated fabrication | Reject known boilerplate markers and excessive revision growth | Assess unrelated invented details |
+
+The LLM judge cannot override a failed deterministic check. If it is disabled or unavailable, evaluation falls back to deterministic checks and reports the source and any judge error. These checks are heuristics; they do not verify every factual claim or independently prove that retrieval selected the best template.
+
+A failed draft receives **one feedback-driven revision** by default, followed by another evaluation. The response exposes `evaluation.passed`, individual `checks`, `issues`, and `reason`; the UI and Langfuse trace make the result inspectable.
+
+### Guardrails: control generation and persistence
+
+- **Template gate:** automatic matching requires a score of at least `0.60`. Qualified private templates take priority; candidates within `0.05` in the preferred group require user selection. No match or an unavailable selected template blocks generation.
+- **Template consistency:** generation uses only the selected template. Continued editing retains the active template; wild mode skips retrieval. Explicit selection still requires access to that template.
+- **Account isolation:** private endpoints validate Supabase authentication and derive the workspace from the authenticated user. Client input cannot select another user's workspace.
+- **Bounded execution:** the graph enforces a step limit, bounded conversation context, and a retry limit.
+- **Accepted-result gate:** only nonempty, unblocked drafts that pass evaluation replace the saved draft. Failed attempts remain available for inspection and do not enter accepted assistant memory.
 
 Generation, revisions, and the LLM evaluator receive bounded conversation context: up to 20 recent user/assistant messages, 4,000 characters per message, and 12,000 content characters total. Existing sessions load their history from the tenant's database instead of trusting the client copy. The latest request overrides conflicting older instructions.
 
