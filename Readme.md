@@ -18,9 +18,27 @@ Now enhanced with Retrieval-Augmented Generation (RAG), custom templates, multi-
 
 https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
 
+### Web UI
+
+<img src="images/web0.png" alt="Web UI 0" width="1000">
+
+#### 📄 User Case: Project Weekly Report
+<div style="display: flex; gap: 10px; flex-wrap: wrap;">
+  <img src="images/web1.png" alt="Web UI 1" width="1000">
+  Template Library
+  <img src="images/web3.png" alt="Web UI 3" width="1000">
+  Agent trace & Evaluation
+    <img src="images/web2.png" alt="Web UI 2" width="1000">
+</div>
+
+#### ⚠️ No Matched Template (using "Generate with templates" button)
+<div style="display: flex; gap: 10px; flex-wrap: wrap;">
+  <img src="images/web4.png" alt="Web UI 4" width="1000">
+   Agent trace & Evaluation
+  <img src="images/web5.png" alt="Web UI 4" width="1000">
+</div>
+
 ---
-
-
 
 ## 🚀 Features
 
@@ -55,7 +73,6 @@ https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
 | **Deployment**  | Render + Docker+ GitHub Actions |
 ---
 
-
 ## 🧱 Template DB / Vector Index
 
 Templates and template embeddings are stored in Postgres with pgvector.
@@ -76,7 +93,6 @@ To initialize the `vector` extension, create template indexes, seed bundled JSON
 cd chatbox-backend
 ./.venv/bin/python langchain_runner/build_vectorstore.py --tenant YOUR_SUPABASE_USER_UUID
 ```
-
 
 ## 📂 Architecture Overview
 
@@ -176,60 +192,6 @@ Generation, revisions, and the LLM evaluator receive bounded conversation contex
 
 Only nonempty drafts that pass evaluation and are not blocked update the saved draft and active template. Failed candidates remain in `agent_runs` for inspection, while the previous valid draft and its settings are preserved. Rejected candidates do not enter the assistant conversation memory. The API reports `state.draft_accepted` and `state.current_draft`; the UI retains the saved draft and explains a rejected attempt, including after reopening the session.
 
-Run eval cases:
-
-```bash
-cd chatbox-backend
-EVAL_ACCESS_TOKEN="your-user-access-token" ./.venv/bin/python tests/evals/run_writing_agent_eval.py
-```
-
-## Account workspaces and Supabase email authentication
-
-Each confirmed Supabase email account owns one private workspace. This implements account-level multi-tenancy; shared organization membership and invitations are not included. The frontend supports email/password registration, email confirmation, sign-in, automatic token refresh, and sign-out using the [Supabase Auth SDK](https://supabase.com/docs/guides/auth/passwords).
-
-Set backend environment variables (root `.env` locally, Render environment in production):
-
-```dotenv
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
-```
-
-Set frontend variables in `chatbox-frontend/.env` locally and Vercel's build environment in production:
-
-```dotenv
-REACT_APP_SUPABASE_URL=https://your-project.supabase.co
-REACT_APP_SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
-REACT_APP_API_URL=https://your-backend.example.com
-```
-
-Use the same Supabase project for Auth and `DATABASE_URL`. Only the publishable/anon key belongs in the frontend; never use service-role or secret keys. Enable Email authentication and set Site URL plus allowed redirect URLs to the local/frontend site addresses in Supabase Authentication settings. Rebuild the frontend and restart the backend after configuration changes.
-
-Private application endpoints require `Authorization: Bearer <access_token>`; `/health` and `GET /public/templates` are public. The public template endpoint serves only the fifteen version-controlled default JSON templates, never legacy database records or private workspace data. Guests can browse these templates before signing in; generation and saving templates still require authentication. The backend validates the token with the configured project's `/auth/v1/user` endpoint, requires a confirmed email, and derives the workspace from that user's UUID. Request bodies and tenant headers cannot select another workspace. Authentication configuration or service failures deny access.
-
-The first authenticated request provisions `tenant_<user_uuid_without_hyphens>`. Each workspace has its own `templates` (including vectors), `agent_sessions`, `agent_runs`, and `messages`. Database connections use only that schema and `pg_catalog` in their search path; pgvector types/operators are explicitly qualified. There is no fallback to legacy `public` tables. Browser session IDs and Langfuse session groups are scoped to the account. Every workspace can use the read-only default templates alongside its private library, which initially contains no private templates. Defaults have reserved `default:` IDs and can also be loaded for continued editing. Their embeddings are generated in a batch when missing and stored in a shared database cache keyed by template content hash, model, and dimension; private vectors remain in the tenant database. Chinese bigrams participate in keyword matching, and requests without keyword evidence use the semantic score alone. Users can explicitly select a template using “Use this template” in the preview, bypassing automatic retrieval while preserving tenant access checks. Qualified private templates take priority over public defaults. If candidates in the preferred group differ by no more than `TEMPLATE_CHOICE_SCORE_GAP` (default `0.05`), generation waits for user selection. Drafts use only the selected template as their structural reference. Users can create private templates through the UI, or an administrator can seed private copies of the bundled templates:
-
-```bash
-cd chatbox-backend
-./.venv/bin/python manage_workspace.py --user-id USER_UUID --seed-templates
-```
-
-Existing `public` data is preserved and is not automatically assigned to new users. After registering and confirming the intended owner, explicitly copy the old data into their empty workspace:
-
-```bash
-./.venv/bin/python manage_workspace.py --user-id OWNER_USER_UUID --copy-legacy
-```
-
-This copies all four tables atomically, preserves IDs and embeddings, leaves the originals untouched, and refuses to overwrite a nonempty workspace. The database connection is a trusted backend/admin credential. Tenant schemas must stay outside Supabase's exposed Data API schemas; direct database credentials are not issued to clients.
-
-Validation:
-
-```bash
-cd chatbox-backend
-./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
-# Optional real PostgreSQL test; all test schemas/data are rolled back:
-RUN_DB_TESTS=1 ./.venv/bin/python -m unittest discover -s tests -p 'test_tenancy_db.py'
-```
-
 ## Langfuse tracing
 
 The backend uses the [official LangChain/LangGraph callback integration](https://langfuse.com/integrations/frameworks/langchain) with Langfuse Python SDK v4. Each `/agent/run` produces a `heywrite-agent` trace containing graph nodes, nested model calls, evaluation output, and retries. Traces are grouped by the existing session ID and include the database `run_id` for correlation. LLM observations capture token usage and latency when reported by the model provider.
@@ -246,13 +208,6 @@ LANGFUSE_TRACING_ENABLED=true
 Use the URL shown in your project's settings for your region or self-hosted instance. Configure the same variables in Render for the deployed backend. Restart the backend after changing configuration, generate a draft, then inspect Traces and Sessions in Langfuse.
 
 Without both keys, tracing is disabled automatically. Set `LANGFUSE_TRACING_ENABLED=false` to disable it explicitly. Tracing records prompts, conversation history, drafts, and graph state in the configured Langfuse project. Delivery is asynchronous, and the backend drains pending events on graceful shutdown. Template embedding calls are direct SDK calls and are not captured as separate model observations by this graph callback.
-
-Run the offline integration checks (no database, model API, or Langfuse network calls):
-
-```bash
-cd chatbox-backend
-./.venv/bin/python -m unittest discover -s tests -p 'test_observability.py'
-```
 
 ## 🖥️ Local Run
 
@@ -275,36 +230,67 @@ Script behavior:
 Stop:
 - Close the frontend terminal session (the script then stops backend as well)
 
-### Web UI
+## 🧪 Testing
 
-<img src="images/web0.png" alt="Web UI 0" width="1000">  
+### Automated checks
 
-#### 📄 User Case: Project Weekly Report  
-<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <img src="images/web1.png" alt="Web UI 1" width="1000">  
-  Template Library  
-  <img src="images/web3.png" alt="Web UI 3" width="1000">   
-  Agent trace & Evaluation 
-    <img src="images/web2.png" alt="Web UI 2" width="1000">  
-</div>
-
-#### ⚠️ No Matched Template (using "Generate with templates" button)  
-<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <img src="images/web4.png" alt="Web UI 4" width="1000"> 
-   Agent trace & Evaluation 
-  <img src="images/web5.png" alt="Web UI 4" width="1000"> 
-</div>
-
-
----
-
-
-### Template matching quality benchmark
-
-Run from `chatbox-backend`:
+Backend tests cover authentication, tenant isolation, conversation memory, template selection, evaluation and retries, and Langfuse integration. Frontend tests cover sign-in, template browsing and selection, highlighted templates, and draft interactions.
 
 ```bash
+# Backend: offline regression tests
+cd chatbox-backend
+./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+
+# Optional PostgreSQL integration test (test data is rolled back)
+RUN_DB_TESTS=1 ./.venv/bin/python -m unittest discover -s tests -p 'test_tenancy_db.py'
+
+# Frontend
+cd ../chatbox-frontend
+CI=true npm test -- --watchAll=false --runInBand
+npm run build
+```
+
+### Template matching quality
+
+The benchmark covers **34 labeled English/Chinese requests**: 30 public-template requests, private-template priority, ambiguous private matches, and two unrelated requests that should be rejected.
+
+It uses real OpenAI embeddings and PostgreSQL retrieval, with draft generation mocked. It checks the selected template and whether the agent should generate, ask the user to choose, or reject the request. Finding the correct template in the top three alone does not count as a successful selection.
+
+```bash
+cd chatbox-backend
 .venv/bin/python -m tests.evals.run_template_retrieval_eval --output /tmp/heywrite-template-quality.json
 ```
 
-This benchmark uses real OpenAI embeddings and PostgreSQL retrieval against 34 labeled English/Chinese requests: two requests per bundled template, private-template priority, ambiguous private matches, and unrelated requests that should be rejected. It reports top-1 accuracy, recall@3, selection/choice/rejection accuracy, per-language results, and failures with candidate scores. It exercises the actual template selection gate while mocking draft generation, so it measures template matching rather than generated prose quality. A candidate appearing in the top three does not count as success if a different template is automatically selected. Model API usage incurs embedding costs. Fixtures use an isolated workspace and the entire database transaction is rolled back; no user sessions are created. Nonzero exit status indicates a failed quality case. Add labeled cases to `chatbox-backend/tests/evals/template_retrieval_cases.jsonl` to expand coverage.
+Fixtures run in an isolated workspace and are rolled back. Embedding calls incur API costs; failed quality cases produce a nonzero exit status. Add labeled cases in `chatbox-backend/tests/evals/template_retrieval_cases.jsonl` to expand coverage.
+
+### Verified results
+
+| Check | Passed / executed | Pass rate | Notes |
+| --- | ---: | ---: | --- |
+| Backend regression tests | 27 / 27 | 100% | 1 optional database test skipped |
+| Frontend tests | 20 / 20 | 100% | 3 suites passed |
+| Frontend production build | 1 / 1 | 100% | Build succeeded |
+| Template decisions, threshold 0.65 | 28 / 34 | 82.4% | Recorded retrieval baseline |
+| Template decisions, threshold 0.60 | 33 / 34 | 97.1% | Recorded-score replay; current default |
+
+The **0.65 baseline** uses real retrieval results; the **0.60 result** replays those recorded candidate scores through the selection gate. It is not a fresh embedding run. The remaining failure selects a meeting agenda for an English meeting-summary request.
+
+| Retrieval metric | Correct / total | Rate |
+| --- | ---: | ---: |
+| Top-1 template accuracy | 31 / 32 | 96.9% |
+| Recall@3 | 32 / 32 | 100% |
+| Private priority and ambiguous-choice behavior | 2 / 2 | 100% |
+| Unrelated-request rejection | 2 / 2 | 100% |
+
+See the [baseline report](chatbox-backend/tests/evals/reports/template-retrieval-baseline.md) and [recorded results](chatbox-backend/tests/evals/reports/template-retrieval-baseline.json). These results measure template matching, not generated prose quality.
+
+### Generated content evaluation
+
+For a running backend, use a confirmed user's access token to run the writing-agent cases:
+
+```bash
+cd chatbox-backend
+EVAL_ACCESS_TOKEN="your-user-access-token" ./.venv/bin/python tests/evals/run_writing_agent_eval.py
+```
+
+This exercises actual generation and revision. Review request fulfillment, template structure, tone/language, preserved facts, and the `Changes` section alongside the returned evaluator result and Langfuse trace. No prose-quality pass rate is claimed in the tables above.
