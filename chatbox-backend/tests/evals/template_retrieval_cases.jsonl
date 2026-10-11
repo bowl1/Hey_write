@@ -1,0 +1,34 @@
+{"id": "meeting_invitation_en", "language": "en", "intent": "Write an invitation asking colleagues to attend a product planning meeting on Friday.", "expected_ids": ["default:meeting_invitation"]}
+{"id": "meeting_invitation_zh", "language": "zh", "intent": "写一封会议邀请函，邀请同事周五参加产品规划会议。", "expected_ids": ["default:meeting_invitation"]}
+{"id": "project_weekly_report_en", "language": "en", "intent": "Write this week’s project progress report with completed tasks, blockers and next week’s plan.", "expected_ids": ["default:project_weekly_report"]}
+{"id": "project_weekly_report_zh", "language": "zh", "intent": "写项目周报，包含本周完成事项、阻塞问题和下周计划。", "expected_ids": ["default:project_weekly_report"]}
+{"id": "meeting_summary_en", "language": "en", "intent": "Turn our meeting notes into minutes recording discussions, decisions and action owners.", "expected_ids": ["default:meeting_summary"]}
+{"id": "meeting_summary_zh", "language": "zh", "intent": "整理会议纪要，记录讨论内容、决策和行动项负责人。", "expected_ids": ["default:meeting_summary"]}
+{"id": "contract_risk_review_template_en", "language": "en", "intent": "Review a supplier contract and summarize legal and commercial risks with mitigation suggestions.", "expected_ids": ["default:contract_risk_review_template"]}
+{"id": "contract_risk_review_template_zh", "language": "zh", "intent": "审查供应商合同，汇总合同风险并提出降低风险的建议。", "expected_ids": ["default:contract_risk_review_template"]}
+{"id": "professional_email_en", "language": "en", "intent": "Write a formal business email requesting a colleague to send the budget figures by Thursday.", "expected_ids": ["default:professional_email"]}
+{"id": "professional_email_zh", "language": "zh", "intent": "写正式商务邮件，请同事在周四前发送预算数据。", "expected_ids": ["default:professional_email"]}
+{"id": "customer_follow_up_en", "language": "en", "intent": "Follow up with a customer after our sales conversation, recap their needs and agree on next steps.", "expected_ids": ["default:customer_follow_up"]}
+{"id": "customer_follow_up_zh", "language": "zh", "intent": "给客户写跟进邮件，回顾销售沟通和客户需求，确认下一步。", "expected_ids": ["default:customer_follow_up"]}
+{"id": "leave_request_en", "language": "en", "intent": "Request three days of annual leave from my manager and explain how colleagues will cover my work.", "expected_ids": ["default:leave_request"]}
+{"id": "leave_request_zh", "language": "zh", "intent": "给经理写请假申请，申请三天年假并说明工作交接安排。", "expected_ids": ["default:leave_request"]}
+{"id": "customer_support_reply_en", "language": "en", "intent": "Reply to a support ticket about a failed payment with troubleshooting steps and a follow-up time.", "expected_ids": ["default:customer_support_reply"]}
+{"id": "customer_support_reply_zh", "language": "zh", "intent": "回复客户支持工单，针对支付失败提供排查步骤和后续跟进时间。", "expected_ids": ["default:customer_support_reply"]}
+{"id": "project_proposal_en", "language": "en", "intent": "Propose a new internal reporting project with objectives, scope, milestones, budget and approval request.", "expected_ids": ["default:project_proposal"]}
+{"id": "project_proposal_zh", "language": "zh", "intent": "写项目提案，包含目标、范围、里程碑、预算和立项审批请求。", "expected_ids": ["default:project_proposal"]}
+{"id": "product_launch_en", "language": "en", "intent": "Announce the launch of our new scheduling product, highlight customer benefits and ask people to try it.", "expected_ids": ["default:product_launch"]}
+{"id": "product_launch_zh", "language": "zh", "intent": "写新品发布公告，介绍排程产品的客户收益并邀请用户试用。", "expected_ids": ["default:product_launch"]}
+{"id": "cover_letter_en", "language": "en", "intent": "Write a cover letter applying for a backend engineer role and connect my experience to the job requirements.", "expected_ids": ["default:cover_letter"]}
+{"id": "cover_letter_zh", "language": "zh", "intent": "写求职申请信，应聘后端工程师，说明我的经验如何符合岗位要求。", "expected_ids": ["default:cover_letter"]}
+{"id": "meeting_agenda_en", "language": "en", "intent": "Prepare a timed agenda for tomorrow’s strategy meeting with topics, discussion leads and preparation materials.", "expected_ids": ["default:meeting_agenda"]}
+{"id": "meeting_agenda_zh", "language": "zh", "intent": "准备明天战略会议的会议议程，列出时间安排、议题、主持人和会前材料。", "expected_ids": ["default:meeting_agenda"]}
+{"id": "incident_report_en", "language": "en", "intent": "Document a production outage with customer impact, timeline, cause and preventive action owners.", "expected_ids": ["default:incident_report"]}
+{"id": "incident_report_zh", "language": "zh", "intent": "写生产故障报告，说明客户影响、时间线、原因和预防措施负责人。", "expected_ids": ["default:incident_report"]}
+{"id": "performance_review_en", "language": "en", "intent": "Prepare an employee performance review with achievements, areas for development and measurable goals.", "expected_ids": ["default:performance_review"]}
+{"id": "performance_review_zh", "language": "zh", "intent": "写员工绩效评估，包含成果、待改进方面和可衡量的目标。", "expected_ids": ["default:performance_review"]}
+{"id": "social_media_post_en", "language": "en", "intent": "Write a social media campaign post with an engaging hook, short benefits, call to action and hashtags.", "expected_ids": ["default:social_media_post"]}
+{"id": "social_media_post_zh", "language": "zh", "intent": "写社交媒体营销文案，包含吸引人的开头、简短收益、行动号召和话题标签。", "expected_ids": ["default:social_media_post"]}
+{"id": "private_priority", "language": "en", "fixture": "private", "intent": "Write an invitation asking colleagues to attend a product planning meeting on Friday.", "expected_ids": ["eval_private_invitation"]}
+{"id": "private_ambiguity", "language": "zh", "fixture": "ambiguity", "intent": "写一封会议邀请函，邀请同事周五参加产品规划会议。", "expected_ids": ["eval_private_invitation", "eval_private_invitation_copy"], "expected_decision": "choose"}
+{"id": "unrelated_code", "language": "en", "intent": "Implement a Python binary search function and its unit tests.", "expected_decision": "reject"}
+{"id": "unrelated_recipe", "language": "zh", "intent": "给出番茄炒蛋的具体做法和食材用量。", "expected_decision": "reject"}

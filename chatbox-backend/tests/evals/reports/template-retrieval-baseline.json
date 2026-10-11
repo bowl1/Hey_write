@@ -1,0 +1,1346 @@
+{
+  "summary": {
+    "cases": 34,
+    "passed": 28,
+    "decision_accuracy": 0.8235294117647058,
+    "top1_accuracy": 0.96875,
+    "recall_at_3": 1.0,
+    "failed_case_ids": [
+      "meeting_summary_en",
+      "meeting_summary_zh",
+      "professional_email_zh",
+      "customer_support_reply_zh",
+      "meeting_agenda_zh",
+      "incident_report_en"
+    ]
+  },
+  "by_language": {
+    "en": {
+      "cases": 17,
+      "passed": 15,
+      "decision_accuracy": 0.8823529411764706,
+      "top1_accuracy": 0.9375,
+      "recall_at_3": 1.0,
+      "failed_case_ids": [
+        "meeting_summary_en",
+        "incident_report_en"
+      ]
+    },
+    "zh": {
+      "cases": 17,
+      "passed": 13,
+      "decision_accuracy": 0.7647058823529411,
+      "top1_accuracy": 1.0,
+      "recall_at_3": 1.0,
+      "failed_case_ids": [
+        "meeting_summary_zh",
+        "professional_email_zh",
+        "customer_support_reply_zh",
+        "meeting_agenda_zh"
+      ]
+    }
+  },
+  "results": [
+    {
+      "id": "meeting_invitation_en",
+      "language": "en",
+      "intent": "Write an invitation asking colleagues to attend a product planning meeting on Friday.",
+      "expected_ids": [
+        "default:meeting_invitation"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:meeting_invitation",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:meeting_invitation",
+          "title": "Formal Meeting Invitation",
+          "score": 0.7181732820333293,
+          "semantic_score": 0.5973904029047562,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:project_proposal",
+          "title": "Project Proposal",
+          "score": 0.4150936673917064,
+          "semantic_score": 0.41337906710436023,
+          "keyword_score": 0.41909440139551407
+        },
+        {
+          "id": "default:product_launch",
+          "title": "Product Launch Announcement",
+          "score": 0.40196493986567255,
+          "semantic_score": 0.39928963787988137,
+          "keyword_score": 0.40820731116585207
+        }
+      ]
+    },
+    {
+      "id": "meeting_invitation_zh",
+      "language": "zh",
+      "intent": "写一封会议邀请函，邀请同事周五参加产品规划会议。",
+      "expected_ids": [
+        "default:meeting_invitation"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:meeting_invitation",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:meeting_invitation",
+          "title": "Formal Meeting Invitation",
+          "score": 0.6865913823509413,
+          "semantic_score": 0.5522734033584876,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:meeting_agenda",
+          "title": "Business Meeting Agenda",
+          "score": 0.3612883109394921,
+          "semantic_score": 0.4056870640363097,
+          "keyword_score": 0.25769122038025094
+        },
+        {
+          "id": "default:meeting_summary",
+          "title": "Weekly Project Sync Meeting Summary",
+          "score": 0.3578724966763473,
+          "semantic_score": 0.4196924494978431,
+          "keyword_score": 0.21362594009285715
+        }
+      ]
+    },
+    {
+      "id": "project_weekly_report_en",
+      "language": "en",
+      "intent": "Write this week’s project progress report with completed tasks, blockers and next week’s plan.",
+      "expected_ids": [
+        "default:project_weekly_report"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:project_weekly_report",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:project_weekly_report",
+          "title": "Weekly Project Report",
+          "score": 0.7572721996120123,
+          "semantic_score": 0.6532459994457319,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:meeting_summary",
+          "title": "Weekly Project Sync Meeting Summary",
+          "score": 0.5398193895058947,
+          "semantic_score": 0.5643066420092278,
+          "keyword_score": 0.4826824669981177
+        },
+        {
+          "id": "default:project_proposal",
+          "title": "Project Proposal",
+          "score": 0.3543321854695882,
+          "semantic_score": 0.43243891821242275,
+          "keyword_score": 0.17208314240297423
+        }
+      ]
+    },
+    {
+      "id": "project_weekly_report_zh",
+      "language": "zh",
+      "intent": "写项目周报，包含本周完成事项、阻塞问题和下周计划。",
+      "expected_ids": [
+        "default:project_weekly_report"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:project_weekly_report",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:project_weekly_report",
+          "title": "Weekly Project Report",
+          "score": 0.7179681665827164,
+          "semantic_score": 0.597097380832452,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:project_proposal",
+          "title": "Project Proposal",
+          "score": 0.5060241184874157,
+          "semantic_score": 0.37795387033255035,
+          "keyword_score": 0.8048546975154348
+        },
+        {
+          "id": "default:meeting_agenda",
+          "title": "Business Meeting Agenda",
+          "score": 0.36649342638320925,
+          "semantic_score": 0.3573476273865912,
+          "keyword_score": 0.3878336240419849
+        }
+      ]
+    },
+    {
+      "id": "meeting_summary_en",
+      "language": "en",
+      "intent": "Turn our meeting notes into minutes recording discussions, decisions and action owners.",
+      "expected_ids": [
+        "default:meeting_summary"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:meeting_agenda",
+      "choice_ids": [],
+      "passed": false,
+      "top1_correct": false,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:meeting_agenda",
+          "title": "Business Meeting Agenda",
+          "score": 0.6530903573560904,
+          "semantic_score": 0.5044147962229864,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:meeting_summary",
+          "title": "Weekly Project Sync Meeting Summary",
+          "score": 0.5699602137243704,
+          "semantic_score": 0.531483606773001,
+          "keyword_score": 0.659738963277566
+        },
+        {
+          "id": "default:customer_follow_up",
+          "title": "Customer Follow-up Email",
+          "score": 0.37667763034565144,
+          "semantic_score": 0.32789358159547033,
+          "keyword_score": 0.49050707742940747
+        }
+      ]
+    },
+    {
+      "id": "meeting_summary_zh",
+      "language": "zh",
+      "intent": "整理会议纪要，记录讨论内容、决策和行动项负责人。",
+      "expected_ids": [
+        "default:meeting_summary"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "reject",
+      "selected_id": null,
+      "choice_ids": [],
+      "passed": false,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:meeting_summary",
+          "title": "Weekly Project Sync Meeting Summary",
+          "score": 0.6146023362363775,
+          "semantic_score": 0.4494319089091108,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:meeting_agenda",
+          "title": "Business Meeting Agenda",
+          "score": 0.4857847673402136,
+          "semantic_score": 0.4975493859604969,
+          "keyword_score": 0.45833399055955254
+        },
+        {
+          "id": "default:meeting_invitation",
+          "title": "Formal Meeting Invitation",
+          "score": 0.2894799241499682,
+          "semantic_score": 0.32625863424231083,
+          "keyword_score": 0.2036629339345021
+        }
+      ]
+    },
+    {
+      "id": "contract_risk_review_template_en",
+      "language": "en",
+      "intent": "Review a supplier contract and summarize legal and commercial risks with mitigation suggestions.",
+      "expected_ids": [
+        "default:contract_risk_review_template"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:contract_risk_review_template",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:contract_risk_review_template",
+          "title": "Contract Risk Review Template",
+          "score": 0.765376405307123,
+          "semantic_score": 0.6648234361530329,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:performance_review",
+          "title": "Performance Review",
+          "score": 0.30518100680961197,
+          "semantic_score": 0.2738260757476254,
+          "keyword_score": 0.37834251262091395
+        },
+        {
+          "id": "default:project_weekly_report",
+          "title": "Weekly Project Report",
+          "score": 0.28599217479763384,
+          "semantic_score": 0.2767906502937634,
+          "keyword_score": 0.30746239863999825
+        }
+      ]
+    },
+    {
+      "id": "contract_risk_review_template_zh",
+      "language": "zh",
+      "intent": "审查供应商合同，汇总合同风险并提出降低风险的建议。",
+      "expected_ids": [
+        "default:contract_risk_review_template"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:contract_risk_review_template",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:contract_risk_review_template",
+          "title": "Contract Risk Review Template",
+          "score": 0.6995013737242197,
+          "semantic_score": 0.5707162481774568,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:project_proposal",
+          "title": "Project Proposal",
+          "score": 0.2975757435254095,
+          "semantic_score": 0.294969447042543,
+          "keyword_score": 0.30365710198543144
+        },
+        {
+          "id": "default:customer_follow_up",
+          "title": "Customer Follow-up Email",
+          "score": 0.15801531964941612,
+          "semantic_score": 0.22573617092773735,
+          "keyword_score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "professional_email_en",
+      "language": "en",
+      "intent": "Write a formal business email requesting a colleague to send the budget figures by Thursday.",
+      "expected_ids": [
+        "default:professional_email"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:professional_email",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:professional_email",
+          "title": "Professional Business Email",
+          "score": 0.6572650816298633,
+          "semantic_score": 0.5103786880426618,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:meeting_invitation",
+          "title": "Formal Meeting Invitation",
+          "score": 0.4470074554370075,
+          "semantic_score": 0.41474780296445535,
+          "keyword_score": 0.5222799778729624
+        },
+        {
+          "id": "default:leave_request",
+          "title": "Leave Request",
+          "score": 0.40381086192310106,
+          "semantic_score": 0.40876201696967174,
+          "keyword_score": 0.3922581668144363
+        }
+      ]
+    },
+    {
+      "id": "professional_email_zh",
+      "language": "zh",
+      "intent": "写正式商务邮件，请同事在周四前发送预算数据。",
+      "expected_ids": [
+        "default:professional_email"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "reject",
+      "selected_id": null,
+      "choice_ids": [],
+      "passed": false,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:professional_email",
+          "title": "Professional Business Email",
+          "score": 0.6088454259317877,
+          "semantic_score": 0.4412077513311252,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:project_weekly_report",
+          "title": "Weekly Project Report",
+          "score": 0.2789891553723758,
+          "semantic_score": 0.3985559362462512,
+          "keyword_score": 0.0
+        },
+        {
+          "id": "default:meeting_invitation",
+          "title": "Formal Meeting Invitation",
+          "score": 0.2757345070922093,
+          "semantic_score": 0.3939064387031562,
+          "keyword_score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "customer_follow_up_en",
+      "language": "en",
+      "intent": "Follow up with a customer after our sales conversation, recap their needs and agree on next steps.",
+      "expected_ids": [
+        "default:customer_follow_up"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:customer_follow_up",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:customer_follow_up",
+          "title": "Customer Follow-up Email",
+          "score": 0.8133215378815861,
+          "semantic_score": 0.7333164826879803,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:customer_support_reply",
+          "title": "Customer Support Reply",
+          "score": 0.4434083009145849,
+          "semantic_score": 0.49327890000005814,
+          "keyword_score": 0.32704356971514725
+        },
+        {
+          "id": "default:social_media_post",
+          "title": "Social Media Campaign Post",
+          "score": 0.2771229713294377,
+          "semantic_score": 0.3632367681944293,
+          "keyword_score": 0.07619077864445736
+        }
+      ]
+    },
+    {
+      "id": "customer_follow_up_zh",
+      "language": "zh",
+      "intent": "给客户写跟进邮件，回顾销售沟通和客户需求，确认下一步。",
+      "expected_ids": [
+        "default:customer_follow_up"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:customer_follow_up",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:customer_follow_up",
+          "title": "Customer Follow-up Email",
+          "score": 0.7488653504669153,
+          "semantic_score": 0.6412362149527362,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:customer_support_reply",
+          "title": "Customer Support Reply",
+          "score": 0.3879964815913949,
+          "semantic_score": 0.4876117718574726,
+          "keyword_score": 0.15556080430388022
+        },
+        {
+          "id": "default:professional_email",
+          "title": "Professional Business Email",
+          "score": 0.3389392967086462,
+          "semantic_score": 0.3723544155591736,
+          "keyword_score": 0.2609706860574158
+        }
+      ]
+    },
+    {
+      "id": "leave_request_en",
+      "language": "en",
+      "intent": "Request three days of annual leave from my manager and explain how colleagues will cover my work.",
+      "expected_ids": [
+        "default:leave_request"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:leave_request",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:leave_request",
+          "title": "Leave Request",
+          "score": 0.710740081064416,
+          "semantic_score": 0.5867715443777373,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:cover_letter",
+          "title": "Job Application Cover Letter",
+          "score": 0.4047790021551272,
+          "semantic_score": 0.2512853344797208,
+          "keyword_score": 0.7629308933977421
+        },
+        {
+          "id": "default:professional_email",
+          "title": "Professional Business Email",
+          "score": 0.3004212914024305,
+          "semantic_score": 0.2788510792881985,
+          "keyword_score": 0.3507517863356385
+        }
+      ]
+    },
+    {
+      "id": "leave_request_zh",
+      "language": "zh",
+      "intent": "给经理写请假申请，申请三天年假并说明工作交接安排。",
+      "expected_ids": [
+        "default:leave_request"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:leave_request",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:leave_request",
+          "title": "Leave Request",
+          "score": 0.7587445668756597,
+          "semantic_score": 0.6553493812509426,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:professional_email",
+          "title": "Professional Business Email",
+          "score": 0.30888127420272965,
+          "semantic_score": 0.3672769599099691,
+          "keyword_score": 0.1726246742191709
+        },
+        {
+          "id": "default:cover_letter",
+          "title": "Job Application Cover Letter",
+          "score": 0.26958860972450915,
+          "semantic_score": 0.3070179416463399,
+          "keyword_score": 0.18225350190690426
+        }
+      ]
+    },
+    {
+      "id": "customer_support_reply_en",
+      "language": "en",
+      "intent": "Reply to a support ticket about a failed payment with troubleshooting steps and a follow-up time.",
+      "expected_ids": [
+        "default:customer_support_reply"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:customer_support_reply",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:customer_support_reply",
+          "title": "Customer Support Reply",
+          "score": 0.656364937642606,
+          "semantic_score": 0.5090927680608658,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:customer_follow_up",
+          "title": "Customer Follow-up Email",
+          "score": 0.486132740949193,
+          "semantic_score": 0.41247696336592965,
+          "keyword_score": 0.6579962219768075
+        },
+        {
+          "id": "default:incident_report",
+          "title": "Incident Report",
+          "score": 0.2554489621689749,
+          "semantic_score": 0.2564271920668677,
+          "keyword_score": 0.2531664257405585
+        }
+      ]
+    },
+    {
+      "id": "customer_support_reply_zh",
+      "language": "zh",
+      "intent": "回复客户支持工单，针对支付失败提供排查步骤和后续跟进时间。",
+      "expected_ids": [
+        "default:customer_support_reply"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "reject",
+      "selected_id": null,
+      "choice_ids": [],
+      "passed": false,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:customer_support_reply",
+          "title": "Customer Support Reply",
+          "score": 0.625358258893915,
+          "semantic_score": 0.464797512705593,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:customer_follow_up",
+          "title": "Customer Follow-up Email",
+          "score": 0.469463023481214,
+          "semantic_score": 0.4202391129701679,
+          "keyword_score": 0.584318814673655
+        },
+        {
+          "id": "default:project_weekly_report",
+          "title": "Weekly Project Report",
+          "score": 0.16830772789027004,
+          "semantic_score": 0.24043961127181435,
+          "keyword_score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "project_proposal_en",
+      "language": "en",
+      "intent": "Propose a new internal reporting project with objectives, scope, milestones, budget and approval request.",
+      "expected_ids": [
+        "default:project_proposal"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:project_proposal",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:project_proposal",
+          "title": "Project Proposal",
+          "score": 0.706878628668834,
+          "semantic_score": 0.5812551838126201,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:project_weekly_report",
+          "title": "Weekly Project Report",
+          "score": 0.41634004561892674,
+          "semantic_score": 0.44614796792201217,
+          "keyword_score": 0.3467882269117275
+        },
+        {
+          "id": "default:leave_request",
+          "title": "Leave Request",
+          "score": 0.30484215958985295,
+          "semantic_score": 0.3034766365819709,
+          "keyword_score": 0.30802837994157795
+        }
+      ]
+    },
+    {
+      "id": "project_proposal_zh",
+      "language": "zh",
+      "intent": "写项目提案，包含目标、范围、里程碑、预算和立项审批请求。",
+      "expected_ids": [
+        "default:project_proposal"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:project_proposal",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:project_proposal",
+          "title": "Project Proposal",
+          "score": 0.7366486064714852,
+          "semantic_score": 0.6237837235306933,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:project_weekly_report",
+          "title": "Weekly Project Report",
+          "score": 0.3235628549108335,
+          "semantic_score": 0.396933149239474,
+          "keyword_score": 0.15236550147733896
+        },
+        {
+          "id": "default:leave_request",
+          "title": "Leave Request",
+          "score": 0.2551351825459556,
+          "semantic_score": 0.36447883220850796,
+          "keyword_score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "product_launch_en",
+      "language": "en",
+      "intent": "Announce the launch of our new scheduling product, highlight customer benefits and ask people to try it.",
+      "expected_ids": [
+        "default:product_launch"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:product_launch",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:product_launch",
+          "title": "Product Launch Announcement",
+          "score": 0.7257123056787425,
+          "semantic_score": 0.6081604366839178,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:project_proposal",
+          "title": "Project Proposal",
+          "score": 0.34674872611729124,
+          "semantic_score": 0.3521269222278889,
+          "keyword_score": 0.33419960185923014
+        },
+        {
+          "id": "default:customer_follow_up",
+          "title": "Customer Follow-up Email",
+          "score": 0.34355564855554205,
+          "semantic_score": 0.315171148864132,
+          "keyword_score": 0.40978614783549894
+        }
+      ]
+    },
+    {
+      "id": "product_launch_zh",
+      "language": "zh",
+      "intent": "写新品发布公告，介绍排程产品的客户收益并邀请用户试用。",
+      "expected_ids": [
+        "default:product_launch"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:product_launch",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:product_launch",
+          "title": "Product Launch Announcement",
+          "score": 0.6632342981955316,
+          "semantic_score": 0.5189061402793309,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:customer_follow_up",
+          "title": "Customer Follow-up Email",
+          "score": 0.24597955289358725,
+          "semantic_score": 0.3011353389963747,
+          "keyword_score": 0.11728271865374995
+        },
+        {
+          "id": "default:meeting_invitation",
+          "title": "Formal Meeting Invitation",
+          "score": 0.22038492883057634,
+          "semantic_score": 0.24016737549723355,
+          "keyword_score": 0.17422588660837626
+        }
+      ]
+    },
+    {
+      "id": "cover_letter_en",
+      "language": "en",
+      "intent": "Write a cover letter applying for a backend engineer role and connect my experience to the job requirements.",
+      "expected_ids": [
+        "default:cover_letter"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:cover_letter",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:cover_letter",
+          "title": "Job Application Cover Letter",
+          "score": 0.7093996357205414,
+          "semantic_score": 0.5848566224579165,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:professional_email",
+          "title": "Professional Business Email",
+          "score": 0.22825373567699658,
+          "semantic_score": 0.2858691737178072,
+          "keyword_score": 0.09381771358177189
+        },
+        {
+          "id": "default:performance_review",
+          "title": "Performance Review",
+          "score": 0.21202266551712026,
+          "semantic_score": 0.24687545233985686,
+          "keyword_score": 0.13069949626406824
+        }
+      ]
+    },
+    {
+      "id": "cover_letter_zh",
+      "language": "zh",
+      "intent": "写求职申请信，应聘后端工程师，说明我的经验如何符合岗位要求。",
+      "expected_ids": [
+        "default:cover_letter"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:cover_letter",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:cover_letter",
+          "title": "Job Application Cover Letter",
+          "score": 0.6920125775203931,
+          "semantic_score": 0.560017967886276,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:leave_request",
+          "title": "Leave Request",
+          "score": 0.31521484107374187,
+          "semantic_score": 0.37697905352134686,
+          "keyword_score": 0.1710983453626635
+        },
+        {
+          "id": "default:professional_email",
+          "title": "Professional Business Email",
+          "score": 0.26586660848360233,
+          "semantic_score": 0.37980944069086053,
+          "keyword_score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "meeting_agenda_en",
+      "language": "en",
+      "intent": "Prepare a timed agenda for tomorrow’s strategy meeting with topics, discussion leads and preparation materials.",
+      "expected_ids": [
+        "default:meeting_agenda"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:meeting_agenda",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:meeting_agenda",
+          "title": "Business Meeting Agenda",
+          "score": 0.6977088454219905,
+          "semantic_score": 0.5681554934599865,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:meeting_invitation",
+          "title": "Formal Meeting Invitation",
+          "score": 0.48482676512554845,
+          "semantic_score": 0.39364199860043303,
+          "keyword_score": 0.6975912203508178
+        },
+        {
+          "id": "default:meeting_summary",
+          "title": "Weekly Project Sync Meeting Summary",
+          "score": 0.4101070005029849,
+          "semantic_score": 0.4667740358763064,
+          "keyword_score": 0.27788391796523493
+        }
+      ]
+    },
+    {
+      "id": "meeting_agenda_zh",
+      "language": "zh",
+      "intent": "准备明天战略会议的会议议程，列出时间安排、议题、主持人和会前材料。",
+      "expected_ids": [
+        "default:meeting_agenda"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "reject",
+      "selected_id": null,
+      "choice_ids": [],
+      "passed": false,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:meeting_agenda",
+          "title": "Business Meeting Agenda",
+          "score": 0.643117511862501,
+          "semantic_score": 0.4901678740892871,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:meeting_invitation",
+          "title": "Formal Meeting Invitation",
+          "score": 0.3441098197716476,
+          "semantic_score": 0.4095642342794499,
+          "keyword_score": 0.19138285258677576
+        },
+        {
+          "id": "default:meeting_summary",
+          "title": "Weekly Project Sync Meeting Summary",
+          "score": 0.3287167460408896,
+          "semantic_score": 0.38815853124259947,
+          "keyword_score": 0.1900192472368999
+        }
+      ]
+    },
+    {
+      "id": "incident_report_en",
+      "language": "en",
+      "intent": "Document a production outage with customer impact, timeline, cause and preventive action owners.",
+      "expected_ids": [
+        "default:incident_report"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "reject",
+      "selected_id": null,
+      "choice_ids": [],
+      "passed": false,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:incident_report",
+          "title": "Incident Report",
+          "score": 0.6353170651679609,
+          "semantic_score": 0.47902437881137283,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:customer_support_reply",
+          "title": "Customer Support Reply",
+          "score": 0.37475583961025843,
+          "semantic_score": 0.3620887173188527,
+          "keyword_score": 0.4043124582902051
+        },
+        {
+          "id": "default:customer_follow_up",
+          "title": "Customer Follow-up Email",
+          "score": 0.31778860419165544,
+          "semantic_score": 0.2903469488758126,
+          "keyword_score": 0.3818191332619554
+        }
+      ]
+    },
+    {
+      "id": "incident_report_zh",
+      "language": "zh",
+      "intent": "写生产故障报告，说明客户影响、时间线、原因和预防措施负责人。",
+      "expected_ids": [
+        "default:incident_report"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:incident_report",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:incident_report",
+          "title": "Incident Report",
+          "score": 0.6795456247490326,
+          "semantic_score": 0.5422080353557608,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:customer_support_reply",
+          "title": "Customer Support Reply",
+          "score": 0.354879521403314,
+          "semantic_score": 0.3988220447435029,
+          "keyword_score": 0.25234696694287323
+        },
+        {
+          "id": "default:project_weekly_report",
+          "title": "Weekly Project Report",
+          "score": 0.34335504745776185,
+          "semantic_score": 0.4034604417609424,
+          "keyword_score": 0.20310912741700732
+        }
+      ]
+    },
+    {
+      "id": "performance_review_en",
+      "language": "en",
+      "intent": "Prepare an employee performance review with achievements, areas for development and measurable goals.",
+      "expected_ids": [
+        "default:performance_review"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:performance_review",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:performance_review",
+          "title": "Performance Review",
+          "score": 0.7663621329656707,
+          "semantic_score": 0.6662316185223867,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:contract_risk_review_template",
+          "title": "Contract Risk Review Template",
+          "score": 0.25450105448390764,
+          "semantic_score": 0.3020439596802019,
+          "keyword_score": 0.1435676090258877
+        },
+        {
+          "id": "default:project_proposal",
+          "title": "Project Proposal",
+          "score": 0.24473706796987926,
+          "semantic_score": 0.3082325734361653,
+          "keyword_score": 0.09658088854854535
+        }
+      ]
+    },
+    {
+      "id": "performance_review_zh",
+      "language": "zh",
+      "intent": "写员工绩效评估，包含成果、待改进方面和可衡量的目标。",
+      "expected_ids": [
+        "default:performance_review"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:performance_review",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:performance_review",
+          "title": "Performance Review",
+          "score": 0.6773624572681436,
+          "semantic_score": 0.5390892246687766,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:project_weekly_report",
+          "title": "Weekly Project Report",
+          "score": 0.22970098868171268,
+          "semantic_score": 0.32814426954530385,
+          "keyword_score": 0.0
+        },
+        {
+          "id": "default:contract_risk_review_template",
+          "title": "Contract Risk Review Template",
+          "score": 0.2136732359234924,
+          "semantic_score": 0.2481781910758667,
+          "keyword_score": 0.13316167390128575
+        }
+      ]
+    },
+    {
+      "id": "social_media_post_en",
+      "language": "en",
+      "intent": "Write a social media campaign post with an engaging hook, short benefits, call to action and hashtags.",
+      "expected_ids": [
+        "default:social_media_post"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:social_media_post",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:social_media_post",
+          "title": "Social Media Campaign Post",
+          "score": 0.8755257169586239,
+          "semantic_score": 0.8221795956551771,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:product_launch",
+          "title": "Product Launch Announcement",
+          "score": 0.3649960953408976,
+          "semantic_score": 0.42837064148829196,
+          "keyword_score": 0.2171221543303109
+        },
+        {
+          "id": "default:customer_follow_up",
+          "title": "Customer Follow-up Email",
+          "score": 0.20625231010455558,
+          "semantic_score": 0.2640422205302989,
+          "keyword_score": 0.07140918577782115
+        }
+      ]
+    },
+    {
+      "id": "social_media_post_zh",
+      "language": "zh",
+      "intent": "写社交媒体营销文案，包含吸引人的开头、简短收益、行动号召和话题标签。",
+      "expected_ids": [
+        "default:social_media_post"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "default:social_media_post",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "default:social_media_post",
+          "title": "Social Media Campaign Post",
+          "score": 0.7381516041158778,
+          "semantic_score": 0.6259308630226825,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:product_launch",
+          "title": "Product Launch Announcement",
+          "score": 0.32713455630952837,
+          "semantic_score": 0.4673350804421834,
+          "keyword_score": 0.0
+        },
+        {
+          "id": "default:project_proposal",
+          "title": "Project Proposal",
+          "score": 0.2608815474825001,
+          "semantic_score": 0.37268792497500014,
+          "keyword_score": 0.0
+        }
+      ]
+    },
+    {
+      "id": "private_priority",
+      "language": "en",
+      "intent": "Write an invitation asking colleagues to attend a product planning meeting on Friday.",
+      "expected_ids": [
+        "eval_private_invitation"
+      ],
+      "expected_decision": "select_or_choose",
+      "decision": "select",
+      "selected_id": "eval_private_invitation",
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "eval_private_invitation",
+          "title": "Formal Meeting Invitation",
+          "score": 0.7181731128124416,
+          "semantic_score": 0.5973901611606309,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:meeting_invitation",
+          "title": "Formal Meeting Invitation",
+          "score": 0.7181732820333293,
+          "semantic_score": 0.5973904029047562,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:project_proposal",
+          "title": "Project Proposal",
+          "score": 0.4391897165353959,
+          "semantic_score": 0.41337906710436023,
+          "keyword_score": 0.4994145652078125
+        }
+      ]
+    },
+    {
+      "id": "private_ambiguity",
+      "language": "zh",
+      "intent": "写一封会议邀请函，邀请同事周五参加产品规划会议。",
+      "expected_ids": [
+        "eval_private_invitation",
+        "eval_private_invitation_copy"
+      ],
+      "expected_decision": "choose",
+      "decision": "choose",
+      "selected_id": null,
+      "choice_ids": [
+        "eval_private_invitation",
+        "eval_private_invitation_copy"
+      ],
+      "passed": true,
+      "top1_correct": true,
+      "recall_at_3": true,
+      "candidates": [
+        {
+          "id": "eval_private_invitation_copy",
+          "title": "Formal Meeting Invitation",
+          "score": 0.6865912267815948,
+          "semantic_score": 0.552273181116564,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "eval_private_invitation",
+          "title": "Formal Meeting Invitation",
+          "score": 0.6865912267815948,
+          "semantic_score": 0.552273181116564,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:meeting_invitation",
+          "title": "Formal Meeting Invitation",
+          "score": 0.6865913823509413,
+          "semantic_score": 0.5522734033584876,
+          "keyword_score": 1.0
+        }
+      ]
+    },
+    {
+      "id": "unrelated_code",
+      "language": "en",
+      "intent": "Implement a Python binary search function and its unit tests.",
+      "expected_ids": [],
+      "expected_decision": "reject",
+      "decision": "reject",
+      "selected_id": null,
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": null,
+      "recall_at_3": null,
+      "candidates": [
+        {
+          "id": "default:product_launch",
+          "title": "Product Launch Announcement",
+          "score": 0.34310521014372614,
+          "semantic_score": 0.06157887163389453,
+          "keyword_score": 1.0
+        },
+        {
+          "id": "default:incident_report",
+          "title": "Incident Report",
+          "score": 0.3048338300203309,
+          "semantic_score": 0.06413335362228068,
+          "keyword_score": 0.8664682749491146
+        },
+        {
+          "id": "default:project_proposal",
+          "title": "Project Proposal",
+          "score": 0.1384670046181718,
+          "semantic_score": 0.11783660902375925,
+          "keyword_score": 0.18660459433846768
+        }
+      ]
+    },
+    {
+      "id": "unrelated_recipe",
+      "language": "zh",
+      "intent": "给出番茄炒蛋的具体做法和食材用量。",
+      "expected_ids": [],
+      "expected_decision": "reject",
+      "decision": "reject",
+      "selected_id": null,
+      "choice_ids": [],
+      "passed": true,
+      "top1_correct": null,
+      "recall_at_3": null,
+      "candidates": [
+        {
+          "id": "default:leave_request",
+          "title": "Leave Request",
+          "score": 0.16841050870979912,
+          "semantic_score": 0.16841050870979912,
+          "keyword_score": 0.0
+        },
+        {
+          "id": "default:project_proposal",
+          "title": "Project Proposal",
+          "score": 0.1636215569251659,
+          "semantic_score": 0.1636215569251659,
+          "keyword_score": 0.0
+        },
+        {
+          "id": "default:meeting_agenda",
+          "title": "Business Meeting Agenda",
+          "score": 0.14765970879074053,
+          "semantic_score": 0.14765970879074053,
+          "keyword_score": 0.0
+        }
+      ]
+    }
+  ],
+  "configuration": {
+    "embedding_model": "text-embedding-3-small",
+    "min_match_score": 0.65,
+    "vector_weight": 0.7,
+    "keyword_weight": 0.3,
+    "choice_score_gap": 0.05
+  },
+  "evaluated_on": "2026-10-11",
+  "method": "Real OpenAI embeddings and PostgreSQL retrieval; draft generation mocked. Public/negative cases from initial run; two private fixtures rerun after correcting normalized fixture IDs. All database fixtures rolled back."
+}

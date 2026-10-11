@@ -296,3 +296,15 @@ Stop:
 
 
 ---
+
+
+
+### Template matching quality benchmark
+
+Run from `chatbox-backend`:
+
+```bash
+.venv/bin/python -m tests.evals.run_template_retrieval_eval --output /tmp/heywrite-template-quality.json
+```
+
+This benchmark uses real OpenAI embeddings and PostgreSQL retrieval against 34 labeled English/Chinese requests: two requests per bundled template, private-template priority, ambiguous private matches, and unrelated requests that should be rejected. It reports top-1 accuracy, recall@3, selection/choice/rejection accuracy, per-language results, and failures with candidate scores. It exercises the actual template selection gate while mocking draft generation, so it measures template matching rather than generated prose quality. A candidate appearing in the top three does not count as success if a different template is automatically selected. Model API usage incurs embedding costs. Fixtures use an isolated workspace and the entire database transaction is rolled back; no user sessions are created. Nonzero exit status indicates a failed quality case. Add labeled cases to `chatbox-backend/tests/evals/template_retrieval_cases.jsonl` to expand coverage.
