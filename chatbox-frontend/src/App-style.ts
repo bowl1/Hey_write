@@ -6,6 +6,11 @@ const fadeUp = keyframes`
   to   { opacity: 1; transform: translateY(0); }
 `;
 
+const metallicShimmer = keyframes`
+  0%, 60% { transform: translateX(-160%) skewX(-20deg); }
+  90%, 100% { transform: translateX(440%) skewX(-20deg); }
+`;
+
 // Tokens
 const clay   = "#c45c2b";   // main accent — terracotta / burnt sienna
 const clayDk = "#a0471f";   // hover
@@ -889,10 +894,29 @@ export const TemplateRow = styled.button`
   }
 
   &[aria-pressed="true"] {
-    background: #f8e9db;
-    box-shadow: inset 3px 0 0 ${clay};
-    h3 { color: ${clayDk}; }
-    span { color: ${clayDk}; }
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: linear-gradient(115deg, #e8d6ae 0%, #fff4d7 28%, #dcc392 53%, #f6e8c5 76%, #e2cb9f 100%);
+    box-shadow: inset 3px 0 0 #a88034, inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 -1px 0 rgba(135, 99, 34, 0.2);
+    h3 { position: relative; z-index: 1; color: #493819; }
+    span { position: relative; z-index: 1; color: #675023; }
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: -40%;
+      bottom: -40%;
+      left: 0;
+      width: 38%;
+      pointer-events: none;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+      animation: ${metallicShimmer} 5s ease-in-out infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &::before { animation: none; opacity: 0; }
+    }
   }
 
   &:focus-visible {
