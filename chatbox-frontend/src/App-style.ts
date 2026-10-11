@@ -722,14 +722,7 @@ export const SessionMessages = styled.div`
   border-top: 1px solid ${border};
   background: ${paper};
   padding: 0.7rem;
-  max-height: 360px;
-  overflow-y: auto;
   overflow-x: hidden;
-  overscroll-behavior: contain;
-
-  @media (max-width: 900px) {
-    max-height: 300px;
-  }
 
   p {
     white-space: pre-line;
