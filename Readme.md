@@ -123,8 +123,8 @@ Template mode uses hybrid retrieval:
 
 ```text
 query
-  -> pgvector semantic top-k
-  -> BM25 keyword top-k
+  -> pgvector semantic top-k over template metadata, structure, and content
+  -> BM25 keyword top-k over template metadata, structure, and content
   -> merge candidates
   -> weighted rerank
   -> return top templates with scores and matched terms
