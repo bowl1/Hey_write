@@ -573,7 +573,9 @@ export const HistoryPanel = styled.div`
   max-width: 520px;
   flex-shrink: 0;
   box-sizing: border-box;
-  height: fit-content;
+  display: flex;
+  flex-direction: column;
+  height: clamp(420px, calc(100dvh - 8.25rem), 760px);
   position: sticky;
   top: 3rem;
   isolation: isolate;
@@ -598,6 +600,7 @@ export const HistoryPanel = styled.div`
     max-width: 660px;
     position: static;
     padding: 1.25rem;
+    height: 420px;
   }
 
   > p {
@@ -643,17 +646,21 @@ export const SessionList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  max-height: calc(100vh - 8rem);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 0.25rem;
 
-  @media (max-width: 900px) {
-    max-height: 420px;
-  }
+  scrollbar-width: thin;
+  scrollbar-color: ${border} transparent;
+
+  &::-webkit-scrollbar { width: 5px; }
+  &::-webkit-scrollbar-thumb { background: ${border}; border-radius: 3px; }
 `;
 
 export const SessionItem = styled.div`
+  flex-shrink: 0;
   border: 1px solid ${border};
   border-left: 3px solid ${border};
   background: ${linen};
