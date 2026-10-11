@@ -149,6 +149,28 @@ query
 
 The agent only accepts a template when its hybrid match score is at least `TEMPLATE_MIN_MATCH_SCORE`, which defaults to `0.60`.
 
+### How template match scores are calculated
+
+The score combines semantic similarity with keyword relevance:
+
+| Component | Calculation | Default weight |
+| --- | --- | ---: |
+| Semantic score `V` | `max(0, 1 − cosine_distance)` between query and template embeddings | 70% |
+| Keyword score `K` | Template BM25 score divided by the highest BM25 score across accessible templates for this query | 30% |
+
+```text
+With keyword evidence: score = (0.7 × V + 0.3 × K) / (0.7 + 0.3)
+Without keyword evidence in any accessible template: score = V
+```
+
+BM25 uses term frequency, inverse document frequency, and document-length normalization (`k1=1.5`, `b=0.75`). Its retrieval text includes title, category, description, tags, use cases, structure, and content; title and tags appear twice to increase their keyword influence. English uses lowercase alphanumeric tokens; Chinese uses adjacent two-character tokens.
+
+For example, `V=0.80` and `K=0.50` produce `0.71`, displayed as **71%**. This is a retrieval relevance score, not a probability of correctness or a generated-content quality score. Keyword normalization is relative to the current template library, so library changes can affect scores.
+
+Automatic selection requires `score ≥ 0.60`. Qualified private templates take priority over public defaults; within the preferred group, candidates no more than `0.05` below the leading score prompt the user to choose. Explicit manual selection bypasses the score threshold while preserving access checks and is not presented as a 100% match.
+
+Weights can be configured with `TEMPLATE_VECTOR_WEIGHT` and `TEMPLATE_BM25_WEIGHT`; the implementation divides by their sum. If the sum is not positive, it uses the semantic score alone.
+
 Agent state and observability are stored in Postgres:
 
 ```text
@@ -208,18 +230,6 @@ Only nonempty drafts that pass evaluation and are not blocked update the saved d
 
 The backend uses the [official LangChain/LangGraph callback integration](https://langfuse.com/integrations/frameworks/langchain) with Langfuse Python SDK v4. Each `/agent/run` produces a `heywrite-agent` trace containing graph nodes, nested model calls, evaluation output, and retries. Traces are grouped by the existing session ID and include the database `run_id` for correlation. LLM observations capture token usage and latency when reported by the model provider.
 
-Install the backend requirements, then add project keys from Langfuse Settings to the root `.env` (or `chatbox-backend/.env`):
-
-```dotenv
-LANGFUSE_PUBLIC_KEY=pk-lf-...
-LANGFUSE_SECRET_KEY=sk-lf-...
-LANGFUSE_BASE_URL=https://cloud.langfuse.com
-LANGFUSE_TRACING_ENABLED=true
-```
-
-Use the URL shown in your project's settings for your region or self-hosted instance. Configure the same variables in Render for the deployed backend. Restart the backend after changing configuration, generate a draft, then inspect Traces and Sessions in Langfuse.
-
-Without both keys, tracing is disabled automatically. Set `LANGFUSE_TRACING_ENABLED=false` to disable it explicitly. Tracing records prompts, conversation history, drafts, and graph state in the configured Langfuse project. Delivery is asynchronous, and the backend drains pending events on graceful shutdown. Template embedding calls are direct SDK calls and are not captured as separate model observations by this graph callback.
 
 ## 🖥️ Local Run
 
