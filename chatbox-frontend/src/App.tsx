@@ -894,11 +894,17 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
         <ResponseControls>
           {lastResponse && (
             <UndoButton onClick={handleUndo}>
-              ⬅️ Back to Last Version
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 5 4 10l5 5M4 10h10a6 6 0 0 1 0 12" transform="translate(0 -3)" />
+              </svg>
+              Back to Last Version
             </UndoButton>
           )}
           <ResetButton onClick={resetConversation}>
-            🔄 Reset Conversation
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 10a8 8 0 1 1 1 7M4 4v6h6" />
+            </svg>
+            Reset Conversation
           </ResetButton>
         </ResponseControls>
 

@@ -253,6 +253,7 @@ export const StyledSelect: StylesConfig<{ value: string; label: string }, false>
 
 export const ResponseControls = styled.div`
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1.25rem;
@@ -295,8 +296,40 @@ export const Button = styled.button`
   }
 `;
 
-export const UndoButton = styled(Button)``;
-export const ResetButton = styled(Button)``;
+const ConversationButton = styled(Button)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0.55rem 0.8rem;
+  line-height: 1.3;
+
+  svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  &:focus-visible {
+    outline: 2px solid ${clay};
+    outline-offset: 3px;
+  }
+`;
+
+export const UndoButton = styled(ConversationButton)`
+  background: ${linen};
+  color: ${body};
+
+  &:hover { color: ${clayDk}; }
+`;
+
+export const ResetButton = styled(ConversationButton)`
+  border-color: transparent;
+
+  &:hover {
+    background: #f5ede4;
+    border-color: ${border};
+    color: ${clayDk};
+    box-shadow: none;
+  }
+`;
 
 export const GenerateButtons = styled.div`
   display: grid;
