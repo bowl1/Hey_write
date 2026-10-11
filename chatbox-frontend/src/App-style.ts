@@ -252,11 +252,28 @@ export const StyledSelect: StylesConfig<{ value: string; label: string }, false>
 // ─── Controls Row ─────────────────────────────────────────────────────────────
 
 export const ResponseControls = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid ${border};
+
+  > button:first-child { justify-self: start; }
+  > button:last-child { grid-column: 2; justify-self: end; }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+
+    > button:first-child,
+    > button:last-child {
+      grid-column: 1;
+      justify-self: stretch;
+      min-height: 44px;
+    }
+  }
 `;
 
 // ─── Buttons ──────────────────────────────────────────────────────────────────
@@ -335,7 +352,7 @@ export const GenerateButtons = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 0.875rem;
-  margin-top: 1.75rem;
+  margin-top: 1.25rem;
 
   @media (max-width: 480px) {
     grid-template-columns: 1fr;
