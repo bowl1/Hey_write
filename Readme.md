@@ -228,6 +228,10 @@ Only nonempty drafts that pass evaluation and are not blocked update the saved d
 
 ## Langfuse tracing
 
+<img src="images/langfuse-tracing.png" alt="HeyWrite Langfuse tracing dashboard showing agent nodes, model calls, evaluation, and feedback-driven revision" width="1000">
+
+*Agent execution in Langfuse: graph nodes, DeepSeek model calls, evaluation, and feedback-driven revision.*
+
 The backend uses the [official LangChain/LangGraph callback integration](https://langfuse.com/integrations/frameworks/langchain) with Langfuse Python SDK v4. Each `/agent/run` produces a `heywrite-agent` trace containing graph nodes, nested model calls, evaluation output, and retries. Traces are grouped by the existing session ID and include the database `run_id` for correlation. LLM observations capture token usage and latency when reported by the model provider.
 
 
