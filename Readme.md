@@ -87,7 +87,7 @@ export AGENT_LLM_EVALUATOR_ENABLED="true"
 export TEMPLATE_MIN_MATCH_SCORE="0.60"
 ```
 
-To initialize the `vector` extension, create template indexes, seed bundled JSON templates into Postgres, and refresh template embeddings:
+First apply the administrative migration and configure a restricted runtime `DATABASE_URL` as described in [shared tenancy deployment](docs/shared-tenancy.md). Then seed bundled JSON templates into a workspace and refresh embeddings:
 
 ```bash
 cd chatbox-backend
@@ -219,8 +219,11 @@ A failed draft receives **one feedback-driven revision** by default, followed by
 - **Template gate:** automatic matching requires a score of at least `0.60`. Qualified private templates take priority; candidates within `0.05` in the preferred group require user selection. No match or an unavailable selected template blocks generation.
 - **Template consistency:** generation uses only the selected template. Continued editing retains the active template; wild mode skips retrieval. Explicit selection still requires access to that template.
 - **Account isolation:** private endpoints validate Supabase authentication and derive the workspace from the authenticated user. Client input cannot select another user's workspace.
+- **Tenant RLS:** private data uses shared tables in the `heywrite` schema, with required `tenant_id` columns, composite keys, and forced RLS. The backend sets authenticated identity per transaction and rejects database roles that bypass RLS or own the tables. Administrative migrations are separate from runtime reads/writes. See [shared tenancy deployment](docs/shared-tenancy.md) before deploying this version.
 - **Bounded execution:** the graph enforces a step limit, bounded conversation context, and a retry limit.
 - **Accepted-result gate:** only nonempty, unblocked drafts that pass evaluation replace the saved draft. Failed attempts remain available for inspection and do not enter accepted assistant memory.
+
+Run database integration tests against a disposable PostgreSQL database with pgvector by setting `RLS_TEST_DATABASE_URL` and running `.venv/bin/python -m unittest discover -s tests` from `chatbox-backend`. See [migration and test instructions](docs/shared-tenancy.md).
 
 Generation, revisions, and the LLM evaluator receive bounded conversation context: up to 20 recent user/assistant messages, 4,000 characters per message, and 12,000 content characters total. Existing sessions load their history from the tenant's database instead of trusting the client copy. The latest request overrides conflicting older instructions.
 

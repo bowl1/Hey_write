@@ -3,13 +3,11 @@ import json
 import math
 import os
 import re
-from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 
 import psycopg
-from psycopg import sql
-from tenancy import tenant_id, tenant_schema
+from tenancy import configure_tenant_connection, validate_runtime_role
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from psycopg.rows import dict_row
@@ -41,10 +39,10 @@ def get_database_url() -> str:
 
 
 def get_connection():
-    schema = tenant_schema(tenant_id())
     conn = psycopg.connect(get_database_url(), row_factory=dict_row)
     try:
-        conn.execute(sql.SQL("SET LOCAL search_path TO {}, pg_catalog").format(sql.Identifier(schema)))
+        validate_runtime_role(conn)
+        configure_tenant_connection(conn)
         return conn
     except Exception:
         conn.close()
@@ -220,45 +218,10 @@ def bm25_scores(query: str, templates: list[dict[str, Any]]) -> tuple[dict[str, 
     return scores, matched_terms
 
 
-def init_db(connection=None) -> None:
-    with (nullcontext(connection) if connection is not None else get_connection()) as conn:
-        with conn.cursor() as cur:
-            cur.execute("CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public")
-            cur.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS templates (
-                    id text PRIMARY KEY,
-                    title text NOT NULL,
-                    category text NOT NULL DEFAULT 'general',
-                    description text NOT NULL DEFAULT '',
-                    tags text[] NOT NULL DEFAULT '{{}}',
-                    style text NOT NULL DEFAULT 'Formal',
-                    language text NOT NULL DEFAULT 'English',
-                    use_cases jsonb NOT NULL DEFAULT '[]'::jsonb,
-                    structure jsonb NOT NULL DEFAULT '[]'::jsonb,
-                    content text NOT NULL DEFAULT '',
-                    enabled boolean NOT NULL DEFAULT true,
-                    version integer NOT NULL DEFAULT 1,
-                    embedding public.vector({EMBEDDING_DIMENSION}),
-                    embedding_text text,
-                    embedding_model text,
-                    embedding_updated_at timestamptz,
-                    created_at timestamptz NOT NULL DEFAULT now(),
-                    updated_at timestamptz NOT NULL DEFAULT now()
-                )
-                """
-            )
-            cur.execute("CREATE INDEX IF NOT EXISTS templates_enabled_idx ON templates (enabled)")
-            cur.execute("CREATE INDEX IF NOT EXISTS templates_category_idx ON templates (category)")
-            cur.execute("CREATE INDEX IF NOT EXISTS templates_tags_idx ON templates USING gin (tags)")
-            cur.execute(
-                """
-                CREATE INDEX IF NOT EXISTS templates_embedding_idx
-                ON templates USING ivfflat (embedding public.vector_cosine_ops)
-                WITH (lists = 100)
-                """
-            )
-
+def init_db() -> None:
+    """Compatibility check for maintenance CLIs; schema creation is deployment-only."""
+    from tenancy import ensure_workspace
+    ensure_workspace()
 
 def row_to_template(row: dict[str, Any]) -> dict[str, Any]:
     return {
@@ -281,7 +244,6 @@ def row_to_template(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def list_templates() -> list[dict[str, Any]]:
-    init_db()
     with get_connection() as conn:
         rows = conn.execute(
             """
@@ -297,7 +259,6 @@ def list_templates() -> list[dict[str, Any]]:
 def get_template(template_id: str) -> dict[str, Any] | None:
     if template_id.startswith("default:"):
         return next((template for template in list_public_templates() if template["id"] == template_id), None)
-    init_db()
     with get_connection() as conn:
         row = conn.execute(
             """
@@ -312,7 +273,6 @@ def get_template(template_id: str) -> dict[str, Any] | None:
 
 
 def save_template(template: dict[str, Any], embed: bool = True) -> dict[str, Any]:
-    init_db()
     normalized = normalize_template(template)
     normalized["id"] = slugify(normalized["id"] or normalized["title"])
 
@@ -328,7 +288,7 @@ def save_template(template: dict[str, Any], embed: bool = True) -> dict[str, Any
                 %(style)s, %(language)s, %(use_cases)s, %(structure)s,
                 %(content)s, %(enabled)s, %(version)s
             )
-            ON CONFLICT (id) DO UPDATE SET
+            ON CONFLICT (tenant_id, id) DO UPDATE SET
                 title = EXCLUDED.title,
                 category = EXCLUDED.category,
                 description = EXCLUDED.description,
@@ -393,7 +353,6 @@ def hybrid_match_score(vector_score: float, keyword_score: float, has_keywords: 
 
 
 def search_templates_with_metadata(query: str, limit: int = 3) -> list[dict[str, Any]]:
-    init_db()
     query_embedding = embed_text(query)
     query_vector = vector_literal(query_embedding)
     candidate_limit = max(limit, RETRIEVAL_CANDIDATE_LIMIT)
@@ -508,13 +467,8 @@ def load_public_template_vectors(templates: list[dict[str, Any]]) -> dict[str, l
     with get_connection() as conn:
         # Serialize cold-cache fills across workers and tenants.
         conn.execute("SELECT pg_advisory_xact_lock(hashtext('heywrite-public-template-vectors'))")
-        conn.execute("""CREATE TABLE IF NOT EXISTS public.heywrite_default_template_vectors (
-            template_id text NOT NULL, content_hash text NOT NULL, model text NOT NULL,
-            dimension integer NOT NULL, embedding jsonb NOT NULL,
-            PRIMARY KEY (template_id, content_hash, model, dimension)
-        )""")
         rows = conn.execute("""SELECT template_id, content_hash, embedding
-            FROM public.heywrite_default_template_vectors WHERE model = %s AND dimension = %s""",
+            FROM heywrite.default_template_vectors WHERE model = %s AND dimension = %s""",
             (EMBEDDING_MODEL, EMBEDDING_DIMENSION)).fetchall()
         for row in rows:
             if hashes.get(row["template_id"]) == row["content_hash"]:
@@ -525,7 +479,7 @@ def load_public_template_vectors(templates: list[dict[str, Any]]) -> dict[str, l
             if len(batch) != len(missing) or any(len(vector) != EMBEDDING_DIMENSION for vector in batch):
                 raise ValueError("Default template embedding batch has invalid dimensions")
             for key, vector in zip(missing, batch):
-                conn.execute("""INSERT INTO public.heywrite_default_template_vectors
+                conn.execute("""INSERT INTO heywrite.default_template_vectors
                     (template_id, content_hash, model, dimension, embedding)
                     VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING""",
                     (key, hashes[key], EMBEDDING_MODEL, EMBEDDING_DIMENSION, Jsonb(vector)))
@@ -534,7 +488,6 @@ def load_public_template_vectors(templates: list[dict[str, Any]]) -> dict[str, l
 
 
 def seed_templates_from_files(embed: bool = True, overwrite: bool = False) -> int:
-    init_db()
     TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
     seeded = 0
     for path in sorted(TEMPLATE_DIR.iterdir()):

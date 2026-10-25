@@ -17,7 +17,7 @@ from psycopg import sql
 from psycopg.rows import dict_row
 
 import template_store as templates
-from tenancy import tenant_context, tenant_schema, ensure_workspace
+from tenancy import tenant_context, configure_tenant_connection, validate_runtime_role, ensure_workspace
 from agent.nodes import generate_draft_node
 
 CASES_PATH = Path(__file__).with_name('template_retrieval_cases.jsonl')
@@ -61,11 +61,11 @@ def run(cases):
     conn = psycopg.connect(templates.get_database_url(), row_factory=dict_row)
     user = str(uuid4())
     def borrowed():
-        conn.execute(sql.SQL('SET LOCAL search_path TO {}, pg_catalog').format(sql.Identifier(tenant_schema(user))))
+        validate_runtime_role(conn)
+        configure_tenant_connection(conn)
         return nullcontext(conn)
     try:
-        with tenant_context(user), patch('template_store.get_connection', side_effect=borrowed), \
-             patch('tenancy.psycopg.connect', return_value=nullcontext(conn)):
+        with tenant_context(user), patch('template_store.get_connection', side_effect=borrowed):
             ensure_workspace()
             public = templates.get_template('default:meeting_invitation')
             vectors = templates.load_public_template_vectors([public])

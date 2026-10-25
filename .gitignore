@@ -38,3 +38,5 @@ __pycache__/
 *.pyc
 .env
 chroma_db/
+# Private database backups and migration credentials
+.local-backups/

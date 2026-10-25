@@ -12,21 +12,25 @@ from psycopg.rows import dict_row
 
 import template_store
 import agent.store as store
-from tenancy import tenant_context, tenant_id, tenant_schema, ensure_workspace
+from tenancy import tenant_context, ensure_workspace, configure_tenant_connection, validate_runtime_role
 
 
-@unittest.skipUnless(os.getenv("RUN_DB_TESTS") == "1", "Set RUN_DB_TESTS=1 to test PostgreSQL")
+@unittest.skipUnless(os.getenv("RLS_TEST_DATABASE_URL"), "Set RLS_TEST_DATABASE_URL to a disposable PostgreSQL database with pgvector")
 class DatabaseIsolationTests(unittest.TestCase):
     def test_templates_sessions_messages_runs_and_vector_search_are_isolated(self):
-        conn = psycopg.connect(template_store.get_database_url(), row_factory=dict_row)
+        conn = psycopg.connect(os.environ["RLS_TEST_DATABASE_URL"], row_factory=dict_row)
         users = [str(uuid4()), str(uuid4())]
         def borrowed():
-            conn.execute(sql.SQL("SET LOCAL search_path TO {}, pg_catalog").format(sql.Identifier(tenant_schema(tenant_id()))))
+            validate_runtime_role(conn)
+            configure_tenant_connection(conn)
             return nullcontext(conn)
         try:
+            from migrate_shared import migrate
+            role = 'test_app_' + uuid4().hex
+            migrate(conn, role, copy_tenants=False)
+            conn.execute(sql.SQL('SET LOCAL ROLE {}').format(sql.Identifier(role)))
             with patch("template_store.get_connection", side_effect=borrowed), \
-                 patch("agent.store.get_connection", side_effect=borrowed), \
-                 patch("tenancy.psycopg.connect", return_value=nullcontext(conn)):
+                 patch("agent.store.get_connection", side_effect=borrowed):
                 for index, user in enumerate(users):
                     with tenant_context(user):
                         ensure_workspace()
@@ -73,12 +77,11 @@ class DatabaseIsolationTests(unittest.TestCase):
                         updated = store.persist_agent_state({"session_id": "same-session", "run_id": str(uuid4()), "action": "wild", "intent": "a successful retry", "reply": "New valid draft", "evaluation": {"passed": True}})
                         self.assertTrue(updated["draft_accepted"])
                         self.assertEqual(updated["current_draft"], "New valid draft")
-                # A missing workspace must fail instead of falling back to public.
+                # A fresh account sees an empty workspace without any DDL.
                 with tenant_context(str(uuid4())):
-                    with self.assertRaises(psycopg.errors.UndefinedTable):
-                        with conn.transaction():
-                            borrowed()
-                            conn.execute("SELECT * FROM messages")
+                    ensure_workspace()
+                    borrowed()
+                    self.assertEqual(conn.execute("SELECT * FROM messages").fetchall(), [])
         finally:
             conn.rollback()
             conn.close()

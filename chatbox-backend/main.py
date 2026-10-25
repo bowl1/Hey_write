@@ -40,7 +40,7 @@ async def tenant_middleware(request, call_next):
         try:
             await run_in_threadpool(ensure_workspace)
         except Exception:
-            logger.error("Workspace provisioning failed", exc_info=True)
+            logger.error("Workspace access check failed", exc_info=True)
             return JSONResponse({"detail": "Workspace unavailable"}, status_code=503)
         return await call_next(request)
 
