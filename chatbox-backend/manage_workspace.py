@@ -12,4 +12,4 @@ if __name__ == '__main__':
         ensure_workspace()
         if args.seed_templates:
             seed_templates_from_files(embed=True)
-    print('Workspace ready; no per-user schema is needed. Legacy imports use migrate_shared.py.')
+    print('Workspace ready; no per-user schema is needed. Legacy imports use import_legacy_tenants.py.')

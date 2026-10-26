@@ -47,19 +47,6 @@ def validate_runtime_role(conn) -> None:
         raise RuntimeError("DATABASE_URL must not own shared tables or inherit their owner role")
 
 
-def secure_tenant_table(conn, table: str) -> None:
-    """Deployment-only policy installation for shared tables."""
-    target = sql.Identifier("heywrite", table)
-    predicate = sql.SQL("tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid")
-    conn.execute(sql.SQL("ALTER TABLE {} ENABLE ROW LEVEL SECURITY").format(target))
-    conn.execute(sql.SQL("ALTER TABLE {} FORCE ROW LEVEL SECURITY").format(target))
-    for name, mode in (("tenant_access", "PERMISSIVE"), ("tenant_guard", "RESTRICTIVE")):
-        conn.execute(sql.SQL("DROP POLICY IF EXISTS {} ON {}").format(sql.Identifier(name), target))
-        conn.execute(sql.SQL(
-            "CREATE POLICY {} ON {} AS {} FOR ALL TO PUBLIC USING ({}) WITH CHECK ({})"
-        ).format(sql.Identifier(name), target, sql.SQL(mode), predicate, predicate))
-
-
 @contextmanager
 def tenant_context(value: str):
     value = str(UUID(value))
@@ -115,4 +102,4 @@ def ensure_workspace() -> None:
                 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
                 WHERE n.nspname = 'heywrite' AND c.relname = %s AND c.relkind = 'r'""", (table,)).fetchone()
             if not row or not row["secured"]:
-                raise RuntimeError("Shared schema is not ready; run migrate_shared.py before serving traffic")
+                raise RuntimeError("Shared schema is not ready; apply supabase/migrations before serving traffic")

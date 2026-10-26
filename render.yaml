@@ -6,7 +6,8 @@ services:
     dockerContext: ./chatbox-backend
     plan: free
     branch: master
-    autoDeployTrigger: commit
+    # Deploys come from the GitHub workflow, after migrations succeed.
+    autoDeployTrigger: "off"
     envVars:
       - key: DEEPSEEK_API_KEY
         sync: false

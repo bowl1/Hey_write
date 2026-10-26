@@ -13,6 +13,7 @@ from psycopg.rows import dict_row
 import template_store
 import agent.store as store
 from tenancy import tenant_context, ensure_workspace, configure_tenant_connection, validate_runtime_role
+from tests.migrations import RUNTIME_ROLE, apply_migrations
 
 
 @unittest.skipUnless(os.getenv("RLS_TEST_DATABASE_URL"), "Set RLS_TEST_DATABASE_URL to a disposable PostgreSQL database with pgvector")
@@ -25,9 +26,8 @@ class DatabaseIsolationTests(unittest.TestCase):
             configure_tenant_connection(conn)
             return nullcontext(conn)
         try:
-            from migrate_shared import migrate
-            role = 'test_app_' + uuid4().hex
-            migrate(conn, role, copy_tenants=False)
+            apply_migrations(conn)
+            role = RUNTIME_ROLE
             conn.execute(sql.SQL('SET LOCAL ROLE {}').format(sql.Identifier(role)))
             with patch("template_store.get_connection", side_effect=borrowed), \
                  patch("agent.store.get_connection", side_effect=borrowed):

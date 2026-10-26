@@ -87,7 +87,7 @@ export AGENT_LLM_EVALUATOR_ENABLED="true"
 export TEMPLATE_MIN_MATCH_SCORE="0.60"
 ```
 
-First apply the administrative migration and configure a restricted runtime `DATABASE_URL` as described in [shared tenancy deployment](docs/shared-tenancy.md). Then seed bundled JSON templates into a workspace and refresh embeddings:
+First apply the database migrations in `supabase/migrations` and configure a restricted runtime `DATABASE_URL` as described in [shared tenancy deployment](docs/shared-tenancy.md). Then seed bundled JSON templates into a workspace and refresh embeddings:
 
 ```bash
 cd chatbox-backend

@@ -7,8 +7,9 @@ import psycopg
 from psycopg import sql
 from psycopg.rows import dict_row
 
-from migrate_shared import migrate, TABLES
+from import_legacy_tenants import import_legacy, TABLES
 from tenancy import configure_tenant_connection, tenant_context, validate_runtime_role, tenant_schema
+from tests.migrations import RUNTIME_ROLE, apply_migrations
 
 
 @unittest.skipUnless(os.getenv('RLS_TEST_DATABASE_URL'), 'Set RLS_TEST_DATABASE_URL to a disposable PostgreSQL database with pgvector')
@@ -17,8 +18,8 @@ class RowSecurityTests(unittest.TestCase):
         self.conn = psycopg.connect(os.environ['RLS_TEST_DATABASE_URL'], row_factory=dict_row)
         self.addCleanup(self.conn.close)
         self.addCleanup(self.conn.rollback)
-        self.role = 'rls_test_' + uuid4().hex
-        migrate(self.conn, self.role, copy_tenants=False)
+        self.role = RUNTIME_ROLE
+        apply_migrations(self.conn)
         self.users = [str(uuid4()), str(uuid4())]
 
     def runtime(self, user):
@@ -74,6 +75,11 @@ class RowSecurityTests(unittest.TestCase):
             with self.assertRaises(psycopg.errors.InsufficientPrivilege), self.conn.transaction():
                 self.conn.execute(command)
 
+    def test_migrations_are_idempotent(self):
+        apply_migrations(self.conn)
+        self.runtime(self.users[0])
+        self.conn.execute("INSERT INTO templates (id, title) VALUES ('after-reapply', 'ok')")
+
     def test_admin_connection_is_rejected_by_application(self):
         with self.assertRaisesRegex(RuntimeError, 'BYPASSRLS'):
             validate_runtime_role(self.conn)
@@ -97,10 +103,10 @@ class RowSecurityTests(unittest.TestCase):
             conn.execute(sql.SQL("INSERT INTO {} (session_id, current_draft) VALUES ('same', %s)").format(sql.Identifier(source, 'agent_sessions')), (user,))
             conn.execute(sql.SQL("INSERT INTO {} (run_id, session_id, action, intent) VALUES ('same', 'same', 'new_task', %s)").format(sql.Identifier(source, 'agent_runs')), (user,))
             conn.execute(sql.SQL("INSERT INTO {} (message_id, session_id, role, content) VALUES (99, 'same', 'user', %s)").format(sql.Identifier(source, 'messages')), (user,))
-        reports = migrate(conn, self.role)
+        reports = import_legacy(conn)
         self.assertEqual(len(reports), 2)
         self.assertTrue(all(report['counts']['messages'] == 1 for report in reports))
-        self.assertTrue(all(report['status'] == 'already imported' for report in migrate(conn, self.role)))
+        self.assertTrue(all(report['status'] == 'already imported' for report in import_legacy(conn)))
         for user in self.users:
             self.runtime(user)
             self.assertEqual(conn.execute("SELECT content FROM messages").fetchone()['content'], user)
@@ -112,7 +118,7 @@ class RowSecurityTests(unittest.TestCase):
 
     def test_conflicting_import_rolls_back_without_overwriting(self):
         conn = self.conn
-        from migrate_shared import copy_workspace
+        from import_legacy_tenants import copy_workspace
         user = self.users[0]
         source = tenant_schema(user)
         conn.execute(sql.SQL('CREATE SCHEMA {}').format(sql.Identifier(source)))
