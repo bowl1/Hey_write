@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
+from schemas import Template
 
 BACKEND_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = BACKEND_ROOT.parent
@@ -224,23 +225,8 @@ def init_db() -> None:
     ensure_workspace()
 
 def row_to_template(row: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "source": "private",
-        "id": row["id"],
-        "title": row["title"],
-        "category": row["category"],
-        "description": row["description"],
-        "tags": row.get("tags") or [],
-        "style": row.get("style") or "Formal",
-        "language": row.get("language") or "English",
-        "use_cases": row.get("use_cases") or [],
-        "structure": row.get("structure") or [],
-        "content": row.get("content") or "",
-        "enabled": bool(row.get("enabled", True)),
-        "version": int(row.get("version") or 1),
-        "created_at": row.get("created_at").isoformat() if row.get("created_at") else None,
-        "updated_at": row.get("updated_at").isoformat() if row.get("updated_at") else None,
-    }
+    # Graph state and trace payloads stay JSON-compatible, so templates leave as dicts.
+    return Template.model_validate({**row, "source": "private"}).model_dump(mode="json")
 
 
 def list_templates() -> list[dict[str, Any]]:
@@ -455,7 +441,9 @@ def list_public_templates() -> list[dict[str, Any]]:
     for path in sorted((BACKEND_ROOT / "templates").glob("*.json")):
         template = read_template_file(path)
         if template["enabled"]:
-            templates.append({**template, "id": f"default:{path.stem}", "source": "default"})
+            templates.append(Template.model_validate(
+                {**template, "id": f"default:{path.stem}", "source": "default"}
+            ).model_dump(mode="json"))
     return templates
 
 

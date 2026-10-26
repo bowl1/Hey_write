@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from main import app
-from tenancy import authenticate, tenant_context, tenant_id, tenant_schema
+from tenancy import AuthenticatedUser, authenticate, tenant_context, tenant_id, tenant_schema
 
 A = "00000000-0000-0000-0000-000000000001"
 B = "00000000-0000-0000-0000-000000000002"
@@ -47,7 +47,7 @@ class TenancyTests(unittest.TestCase):
         with patch.dict(os.environ, {"SUPABASE_URL": "https://example.supabase.co", "SUPABASE_PUBLISHABLE_KEY": "public-test-key"}), \
              patch("tenancy.httpx.AsyncClient", return_value=auth_client):
             user = asyncio.run(authenticate("Bearer access-token"))
-        self.assertEqual(user["id"], A)
+        self.assertEqual(str(user.id), A)
         self.assertEqual(str(seen[0].url), "https://example.supabase.co/auth/v1/user")
         self.assertEqual(seen[0].headers["authorization"], "Bearer access-token")
 
@@ -62,7 +62,7 @@ class TenancyTests(unittest.TestCase):
 
     def test_simultaneous_requests_keep_account_context(self):
         async def verify(header):
-            return {"id": A if header == "Bearer a" else B}
+            return AuthenticatedUser(id=A if header == "Bearer a" else B)
         def send(token):
             with TestClient(app) as client:
                 return client.get("/workspace", headers={"Authorization": f"Bearer {token}", "X-Tenant-ID": B if token == "a" else A}).json()

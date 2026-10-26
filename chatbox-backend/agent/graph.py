@@ -22,7 +22,7 @@ from .nodes import (
     route_after_evaluation,
     route_next_tool,
 )
-from .schemas import AgentRunRequest
+from .schemas import AgentRunRequest, AgentRunResponse, AgentRunState
 from .state import WritingAgentState
 
 
@@ -78,7 +78,7 @@ def build_graph():
 writing_graph = build_graph()
 
 
-def run_agent(request: AgentRunRequest) -> dict:
+def run_agent(request: AgentRunRequest) -> AgentRunResponse:
     session_id = request.session_id or str(uuid4())
     initial_state: WritingAgentState = {
         "tenant_id": tenant_id(),
@@ -88,10 +88,7 @@ def run_agent(request: AgentRunRequest) -> dict:
         "intent": request.intent,
         "style": request.style,
         "language": request.language,
-        "history": [
-            message.model_dump() if hasattr(message, "model_dump") else message.dict()
-            for message in request.history
-        ],
+        "history": [message.model_dump() for message in request.history],
         "current_draft": request.current_draft,
         "previous_draft": request.current_draft,
         "active_template_id": request.active_template_id,
@@ -110,17 +107,16 @@ def run_agent(request: AgentRunRequest) -> dict:
         ],
     }
     final_state = writing_graph.invoke(initial_state, config=agent_run_config(initial_state))
-    template_meta = final_state.get("template_meta") or {}
-    return {
-        "reply": final_state.get("reply", ""),
-        "template_meta": template_meta,
-        "evaluation": final_state.get("evaluation") or {},
-        "state": {
-            "session_id": session_id,
-            "active_template_id": final_state.get("active_template_id"),
-            "current_draft": final_state.get("current_draft", ""),
-            "draft_accepted": final_state.get("draft_accepted", False),
-            "blocked_reason": final_state.get("blocked_reason"),
-        },
-        "trace": final_state.get("trace") or [],
-    }
+    return AgentRunResponse(
+        reply=final_state.get("reply", ""),
+        template_meta=final_state.get("template_meta") or {},
+        evaluation=final_state.get("evaluation") or {},
+        state=AgentRunState(
+            session_id=session_id,
+            active_template_id=final_state.get("active_template_id"),
+            current_draft=final_state.get("current_draft", ""),
+            draft_accepted=final_state.get("draft_accepted", False),
+            blocked_reason=final_state.get("blocked_reason"),
+        ),
+        trace=final_state.get("trace") or [],
+    )

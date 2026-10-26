@@ -66,7 +66,7 @@ class ObservabilityTests(unittest.TestCase):
                 root = next(span for span in spans if span.name == "heywrite-agent")
                 self.assertTrue(all(span.context.trace_id == root.context.trace_id for span in spans))
                 self.assertTrue(any("test-langfuse-session" in str(dict(span.attributes)) for span in spans))
-                self.assertTrue(result["evaluation"]["passed"])
+                self.assertTrue(result.evaluation["passed"])
             finally:
                 client.shutdown()
 

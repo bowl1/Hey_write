@@ -3,11 +3,13 @@
 import os
 from contextlib import contextmanager
 from contextvars import ContextVar
+from datetime import datetime
 from uuid import UUID
 
 import httpx
 from fastapi import HTTPException
 from psycopg import sql
+from pydantic import BaseModel, ValidationError
 
 _tenant = ContextVar("tenant_id", default=None)
 
@@ -68,7 +70,15 @@ def tenant_context(value: str):
         _tenant.reset(token)
 
 
-async def authenticate(authorization: str | None) -> dict:
+class AuthenticatedUser(BaseModel):
+    """The fields of Supabase's /auth/v1/user response that authorization relies on."""
+    id: UUID
+    email: str | None = None
+    email_confirmed_at: datetime | None = None
+    is_anonymous: bool | None = None
+
+
+async def authenticate(authorization: str | None) -> AuthenticatedUser:
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(401, "Sign in to access your workspace", headers={"WWW-Authenticate": "Bearer"})
     token = authorization[7:].strip()
@@ -88,12 +98,11 @@ async def authenticate(authorization: str | None) -> dict:
             raise HTTPException(401, "Your session has expired. Please sign in again.",
                                 headers={"WWW-Authenticate": "Bearer"})
         response.raise_for_status()
-        user = response.json()
-        user["id"] = str(UUID(user["id"]))
-        if not user.get("email") or not user.get("email_confirmed_at") or user.get("is_anonymous"):
+        user = AuthenticatedUser.model_validate(response.json())
+        if not user.email or not user.email_confirmed_at or user.is_anonymous:
             raise HTTPException(403, "A confirmed email account is required")
         return user
-    except (httpx.HTTPError, ValueError, KeyError, TypeError):
+    except (httpx.HTTPError, ValidationError, ValueError):
         raise HTTPException(503, "Authentication service unavailable") from None
 
 

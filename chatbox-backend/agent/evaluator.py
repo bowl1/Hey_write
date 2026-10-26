@@ -7,6 +7,7 @@ from typing import Any
 
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
+from pydantic import BaseModel
 
 from langchain_runner.rag_chain import get_llm
 from .memory import conversation_context
@@ -68,6 +69,19 @@ Return JSON with this exact shape:
 )
 
 evaluator_chain = None
+
+
+class EvaluationChecks(BaseModel):
+    preserves_original_structure: bool = False
+    completed_user_request: bool = False
+    used_correct_template: bool = False
+    contains_changes: bool = False
+    no_unrelated_fabrication: bool = False
+
+
+class LLMVerdict(BaseModel):
+    checks: EvaluationChecks
+    reason: str = ""
 
 
 def _draft_body(reply: str) -> str:
@@ -215,7 +229,7 @@ def llm_evaluate(state: dict[str, Any]) -> dict[str, Any] | None:
                 "reply": state.get("reply", ""),
             }
         )
-        parsed = _extract_json(result)
+        verdict = LLMVerdict.model_validate(_extract_json(result))
     except Exception as exc:
         return {
             "error": str(exc),
@@ -223,19 +237,9 @@ def llm_evaluate(state: dict[str, Any]) -> dict[str, Any] | None:
             "reason": "LLM evaluator unavailable; used deterministic fallback.",
         }
 
-    checks = parsed.get("checks") if isinstance(parsed, dict) else {}
-    if not isinstance(checks, dict):
-        return None
-    normalized_checks = {
-        "preserves_original_structure": bool(checks.get("preserves_original_structure")),
-        "completed_user_request": bool(checks.get("completed_user_request")),
-        "used_correct_template": bool(checks.get("used_correct_template")),
-        "contains_changes": bool(checks.get("contains_changes")),
-        "no_unrelated_fabrication": bool(checks.get("no_unrelated_fabrication")),
-    }
     return {
-        "checks": normalized_checks,
-        "reason": str(parsed.get("reason") or "LLM evaluator completed."),
+        "checks": verdict.checks.model_dump(),
+        "reason": verdict.reason or "LLM evaluator completed.",
     }
 
 

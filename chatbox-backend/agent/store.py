@@ -6,6 +6,8 @@ from psycopg.types.json import Jsonb
 
 from template_store import get_connection
 
+from .schemas import AgentRunRecord, AgentSession, SessionMessage, SessionSnapshot, SessionSummary
+
 
 def load_session(session_id: str) -> dict[str, Any] | None:
     with get_connection() as conn:
@@ -19,7 +21,7 @@ def load_session(session_id: str) -> dict[str, Any] | None:
         ).fetchone()
 
 
-def load_session_snapshot(session_id: str) -> dict[str, Any] | None:
+def load_session_snapshot(session_id: str) -> SessionSnapshot | None:
     with get_connection() as conn:
         session = conn.execute(
             """
@@ -54,42 +56,14 @@ def load_session_snapshot(session_id: str) -> dict[str, Any] | None:
             (session_id,),
         ).fetchone()
 
-    return {
-        "session": {
-            "session_id": session["session_id"],
-            "active_template_id": session.get("active_template_id"),
-            "current_draft": session.get("current_draft") or "",
-            "style": session.get("style") or "Formal",
-            "language": session.get("language") or "English",
-            "created_at": session.get("created_at").isoformat() if session.get("created_at") else None,
-            "updated_at": session.get("updated_at").isoformat() if session.get("updated_at") else None,
-        },
-        "messages": [
-            {
-                "role": message["role"],
-                "content": message["content"],
-                "created_at": message.get("created_at").isoformat() if message.get("created_at") else None,
-            }
-            for message in messages
-        ],
-        "last_run": (
-            {
-                "run_id": last_run["run_id"],
-                "action": last_run["action"],
-                "intent": last_run["intent"],
-                "selected_template_id": last_run.get("selected_template_id"),
-                "output_state": last_run.get("output_state") or {},
-                "trace": last_run.get("trace") or [],
-                "reply": last_run.get("reply") or "",
-                "created_at": last_run.get("created_at").isoformat() if last_run.get("created_at") else None,
-            }
-            if last_run
-            else None
-        ),
-    }
+    return SessionSnapshot(
+        session=AgentSession.model_validate(session),
+        messages=[SessionMessage.model_validate(message) for message in messages],
+        last_run=AgentRunRecord.model_validate(last_run) if last_run else None,
+    )
 
 
-def list_session_summaries(limit: int = 20) -> list[dict[str, Any]]:
+def list_session_summaries(limit: int = 20) -> list[SessionSummary]:
     with get_connection() as conn:
         sessions = conn.execute(
             """
@@ -122,24 +96,14 @@ def list_session_summaries(limit: int = 20) -> list[dict[str, Any]]:
             )
             title = first_user_message or session.get("current_draft") or "Untitled session"
             summaries.append(
-                {
-                    "session_id": session["session_id"],
-                    "title": title[:80],
-                    "active_template_id": session.get("active_template_id"),
-                    "current_draft": session.get("current_draft") or "",
-                    "style": session.get("style") or "Formal",
-                    "language": session.get("language") or "English",
-                    "message_count": len(messages),
-                    "updated_at": session.get("updated_at").isoformat() if session.get("updated_at") else None,
-                    "messages": [
-                        {
-                            "role": message["role"],
-                            "content": message["content"],
-                            "created_at": message.get("created_at").isoformat() if message.get("created_at") else None,
-                        }
-                        for message in messages
-                    ],
-                }
+                SessionSummary.model_validate(
+                    {
+                        **session,
+                        "title": title[:80],
+                        "message_count": len(messages),
+                        "messages": messages,
+                    }
+                )
             )
     return summaries
 
