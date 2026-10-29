@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /Users/libowen/github/salesforce 2>/dev/null || echo \"Directory does not exist\")",
+      "Bash(ls /Users/libowen/github/)",
+      "Bash(mkdir -p /Users/libowen/github/salesforce/salesforce/objects/AI_Recommendation__c/fields)",
+      "WebFetch(domain:www.nyidanmark.dk)",
+      "Bash(mkdir -p /private/tmp/claude-501/-Users-libowen-github-heywrite/765b58ee-7eae-4f56-90da-5cbc35074176/scratchpad/supabase-cli)",
+      "Bash(gh release *)",
+      "Bash(shasum -a 256 -c)",
+      "Bash(tar xzf *)",
+      "Bash(./supabase --version)",
+      "Bash(grep ' supabase_darwin_arm64.tar.gz$' checksums.txt)",
+      "Bash(shasum -a 256 supabase_darwin_arm64.tar.gz)",
+      "Bash(/private/tmp/claude-501/-Users-libowen-github-heywrite/765b58ee-7eae-4f56-90da-5cbc35074176/scratchpad/supabase-cli/supabase --version)",
+      "Bash(psql -d postgres -Atc \"select rolname from pg_roles where rolname='heywrite_app'\")",
+      "Bash(createdb hw_old)",
+      "Bash(DATABASE_ADMIN_URL=postgresql:///hw_old .venv/bin/python migrate_shared.py --runtime-role heywrite_app --skip-tenant-copy)"
+    ]
+  }
+}

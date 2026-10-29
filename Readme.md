@@ -24,6 +24,8 @@ https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
 
 #### 📄 User Case: Project Weekly Report
 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+ <img src="images/web0-1.png" alt="Web UI 0-1" width="1000">
+  Template Library
   <img src="images/web1.png" alt="Web UI 1" width="1000">
   Template Library
   <img src="images/web3.png" alt="Web UI 3" width="1000">
@@ -38,23 +40,24 @@ https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
   <img src="images/web5.png" alt="Web UI 4" width="1000">
 </div>
 
+#### langfuse trace
+<img src="images/langfuse-tracing.png" alt="Web UI 4" width="1000">
 ---
 
 ## 🚀 Features
 
--  Generate instant writing drafts from your one-sentence intent
+-  Choose and generate writing drafts base on the template you saved in the library
 - Choose between two generation modes:
     - Generate with templates: AI automatically matches your input to a relevant predefined template using vector search
     - Generate something wild: Freely generate content without relying on templates
-- Your intent is automatically matched to the most relevant template using vector search. If no suitable template is found, the app suggests using wild mode for freeform generation.
+- Your intent is automatically matched to the most relevant template using vector search. 
+- If no suitable template is found, the app suggests using wild mode for freeform generation.
 
-- Maintains **multi-turn conversation history**
+- Maintains multi-turn conversation history
 - Revisit previous results and modify based on that
-- Clear chat history and start a new conversation
 - Summarize and highlight the changes made between the previous version and the newly generated content
 - Control tone and style: Formal, Casual, Polite Push, Concise & Direct, Humorous, or Creative
-- Supports **English**, **Chinese**, and **Danish**
-- One-click copy of generated content
+- Supports English, Chinese, and Danish
 
 ---
 
@@ -73,26 +76,6 @@ https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
 | **Deployment**  | Render + Docker+ GitHub Actions |
 ---
 
-## 🧱 Template DB / Vector Index
-
-Templates and template embeddings are stored in Postgres with pgvector.
-Set these environment variables before running template mode:
-
-```bash
-cd chatbox-backend
-export DATABASE_URL="postgresql://user:password@localhost:5432/heywrite"
-export OPENAI_API_KEY="..."
-export DEEPSEEK_API_KEY="..."
-export AGENT_LLM_EVALUATOR_ENABLED="true"
-export TEMPLATE_MIN_MATCH_SCORE="0.60"
-```
-
-First apply the database migrations in `supabase/migrations` and configure a restricted runtime `DATABASE_URL` as described in [shared tenancy deployment](docs/shared-tenancy.md). Then seed bundled JSON templates into a workspace and refresh embeddings:
-
-```bash
-cd chatbox-backend
-./.venv/bin/python langchain_runner/build_vectorstore.py --tenant YOUR_SUPABASE_USER_UUID
-```
 
 ## 📂 Architecture Overview
 
@@ -149,53 +132,6 @@ query
 
 The agent only accepts a template when its hybrid match score is at least `TEMPLATE_MIN_MATCH_SCORE`, which defaults to `0.60`.
 
-### How template match scores are calculated
-
-The score combines semantic similarity with keyword relevance:
-
-| Component | Calculation | Default weight |
-| --- | --- | ---: |
-| Semantic score `V` | `max(0, 1 − cosine_distance)` between query and template embeddings | 70% |
-| Keyword score `K` | Template BM25 score divided by the highest BM25 score across accessible templates for this query | 30% |
-
-```text
-With keyword evidence: score = (0.7 × V + 0.3 × K) / (0.7 + 0.3)
-Without keyword evidence in any accessible template: score = V
-```
-
-BM25 uses term frequency, inverse document frequency, and document-length normalization (`k1=1.5`, `b=0.75`). Its retrieval text includes title, category, description, tags, use cases, structure, and content; title and tags appear twice to increase their keyword influence. English uses lowercase alphanumeric tokens; Chinese uses adjacent two-character tokens.
-
-For example, `V=0.80` and `K=0.50` produce `0.71`, displayed as **71%**. This is a retrieval relevance score, not a probability of correctness or a generated-content quality score. Keyword normalization is relative to the current template library, so library changes can affect scores.
-
-Automatic selection requires `score ≥ 0.60`. Qualified private templates take priority over public defaults; within the preferred group, candidates no more than `0.05` below the leading score prompt the user to choose. Explicit manual selection bypasses the score threshold while preserving access checks and is not presented as a 100% match.
-
-Weights can be configured with `TEMPLATE_VECTOR_WEIGHT` and `TEMPLATE_BM25_WEIGHT`; the implementation divides by their sum. If the sum is not positive, it uses the semantic score alone.
-
-Agent state and observability are stored in Postgres:
-
-```text
-agent_sessions
-agent_runs
-messages
-```
-
-The frontend stores the current `session_id` in `localStorage` and restores it with:
-
-```text
-GET /agent/session/{session_id}
-```
-
-The right-side Conversation History is session-based and loads recent sessions with:
-
-```text
-GET /agent/sessions
-```
-
-Users can expand a session to inspect its messages, then open that session to recover the active draft, active template, message history, last trace, and last evaluator result as long as the same backend database is still available.
-Evaluation and local test sessions using prefixes such as `eval-`, `test-`, and `smoke-` are filtered out of this session list.
-
-Each response includes `reply`, `template_meta`, `evaluation`, `state`, and `trace` so the UI can show which template was used, why it was used, what the agent did, and whether the output passed evaluator checks.
-
 ## 🛡️ Eval & Guardrails
 
 ### Eval: assess each generated draft
@@ -237,27 +173,6 @@ Only nonempty drafts that pass evaluation and are not blocked update the saved d
 
 The backend uses the [official LangChain/LangGraph callback integration](https://langfuse.com/integrations/frameworks/langchain) with Langfuse Python SDK v4. Each `/agent/run` produces a `heywrite-agent` trace containing graph nodes, nested model calls, evaluation output, and retries. Traces are grouped by the existing session ID and include the database `run_id` for correlation. LLM observations capture token usage and latency when reported by the model provider.
 
-
-## 🖥️ Local Run
-
-Prerequisites:
-- Python 3
-- Node.js + npm
-- Postgres with pgvector
-
-Run frontend + backend with one command:
-
-```bash
-./run_local.sh
-```
-
-Script behavior:
-- Auto-creates `chatbox-backend/.venv` if missing
-- Starts backend at `http://127.0.0.1:8000`
-- Starts frontend via CRA dev server
-
-Stop:
-- Close the frontend terminal session (the script then stops backend as well)
 
 ## 🧪 Testing
 
@@ -313,13 +228,72 @@ The **0.65 baseline** uses real retrieval results; the **0.60 result** replays t
 
 See the [baseline report](chatbox-backend/tests/evals/reports/template-retrieval-baseline.md) and [recorded results](chatbox-backend/tests/evals/reports/template-retrieval-baseline.json). These results measure template matching, not generated prose quality.
 
-### Generated content evaluation
 
-For a running backend, use a confirmed user's access token to run the writing-agent cases:
+### How template match scores are calculated
 
-```bash
-cd chatbox-backend
-EVAL_ACCESS_TOKEN="your-user-access-token" ./.venv/bin/python tests/evals/run_writing_agent_eval.py
+The score combines semantic similarity with keyword relevance:
+
+| Component | Calculation | Default weight |
+| --- | --- | ---: |
+| Semantic score `V` | `max(0, 1 − cosine_distance)` between query and template embeddings | 70% |
+| Keyword score `K` | Template BM25 score divided by the highest BM25 score across accessible templates for this query | 30% |
+
+```text
+With keyword evidence: score = (0.7 × V + 0.3 × K) / (0.7 + 0.3)
+Without keyword evidence in any accessible template: score = V
 ```
 
-This exercises actual generation and revision. Review request fulfillment, template structure, tone/language, preserved facts, and the `Changes` section alongside the returned evaluator result and Langfuse trace. No prose-quality pass rate is claimed in the tables above.
+BM25 uses term frequency, inverse document frequency, and document-length normalization (`k1=1.5`, `b=0.75`). Its retrieval text includes title, category, description, tags, use cases, structure, and content; title and tags appear twice to increase their keyword influence. English uses lowercase alphanumeric tokens; Chinese uses adjacent two-character tokens.
+
+For example, `V=0.80` and `K=0.50` produce `0.71`, displayed as **71%**. This is a retrieval relevance score, not a probability of correctness or a generated-content quality score. Keyword normalization is relative to the current template library, so library changes can affect scores.
+
+Automatic selection requires `score ≥ 0.60`. Qualified private templates take priority over public defaults; within the preferred group, candidates no more than `0.05` below the leading score prompt the user to choose. Explicit manual selection bypasses the score threshold while preserving access checks and is not presented as a 100% match.
+
+Weights can be configured with `TEMPLATE_VECTOR_WEIGHT` and `TEMPLATE_BM25_WEIGHT`; the implementation divides by their sum. If the sum is not positive, it uses the semantic score alone.
+
+Agent state and observability are stored in Postgres:
+
+```text
+agent_sessions
+agent_runs
+messages
+```
+
+The frontend stores the current `session_id` in `localStorage` and restores it with:
+
+```text
+GET /agent/session/{session_id}
+```
+
+The right-side Conversation History is session-based and loads recent sessions with:
+
+```text
+GET /agent/sessions
+```
+
+Users can expand a session to inspect its messages, then open that session to recover the active draft, active template, message history, last trace, and last evaluator result as long as the same backend database is still available.
+Evaluation and local test sessions using prefixes such as `eval-`, `test-`, and `smoke-` are filtered out of this session list.
+
+Each response includes `reply`, `template_meta`, `evaluation`, `state`, and `trace` so the UI can show which template was used, why it was used, what the agent did, and whether the output passed evaluator checks.
+
+
+## 🖥️ Local Run
+
+Prerequisites:
+- Python 3
+- Node.js + npm
+- Postgres with pgvector
+
+Run frontend + backend with one command:
+
+```bash
+./run_local.sh
+```
+
+Script behavior:
+- Auto-creates `chatbox-backend/.venv` if missing
+- Starts backend at `http://127.0.0.1:8000`
+- Starts frontend via CRA dev server
+
+Stop:
+- Close the frontend terminal session (the script then stops backend as well)
