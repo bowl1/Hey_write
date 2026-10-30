@@ -79,58 +79,98 @@ https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
 
 ## 📂 Architecture Overview
 
-The main AI endpoint is:
+### System Architecture
 
-```text
-POST /agent/run
+The React client uses Supabase for sign-in and sends the access token to FastAPI. Private API requests resolve the workspace from the verified user; database transactions apply that identity through `app.tenant_id` and forced row-level security (RLS).
+
+```mermaid
+flowchart TB
+    User["User"] --> UI["React + TypeScript UI<br/>Vercel"]
+    UI <-->|"Sign-in and access token"| Auth["Supabase Auth"]
+    UI <--> Local["Browser localStorage<br/>Current session ID"]
+
+    subgraph Backend["FastAPI backend · Docker on Render"]
+        API["Private API<br/>/agent/run · /agent/sessions<br/>/agent/session/:id · /templates · /workspace"]
+        Tenant["Authentication and tenant context<br/>Verified user ID → workspace"]
+        Public["GET /public/templates<br/>No authentication required"]
+        Graph["LangGraph writing agent<br/>Rule-based planner, tools, evaluator"]
+        Templates["Template service<br/>Hybrid retrieval and indexing"]
+        Store["Session and run store<br/>Accepted-draft persistence"]
+        DBAccess["Database access<br/>Runtime role checks + transaction tenant ID"]
+        Files["Bundled public templates<br/>templates/*.json"]
+        Callbacks["Optional Langfuse callbacks"]
+    end
+
+    UI <-->|"JSON + Bearer token"| API
+    UI <-->|"Anonymous template browsing"| Public
+    API --> Tenant
+    Tenant -->|"Validate token via /auth/v1/user"| Auth
+    Tenant --> Graph
+    Tenant --> Templates
+    Tenant --> Store
+    Graph --> Templates
+    Graph --> Store
+    Public --> Files
+    Templates --> Files
+    Templates --> DBAccess
+    Store --> DBAccess
+
+    subgraph Database["PostgreSQL + pgvector · heywrite schema"]
+        PrivateDB[("Tenant-scoped tables · forced RLS<br/>templates + embeddings<br/>agent_sessions · agent_runs · messages")]
+        Cache[("Shared public embedding cache<br/>default_template_vectors")]
+    end
+
+    DBAccess <--> PrivateDB
+    DBAccess <--> Cache
+    Templates <-->|"Query and template embeddings"| OpenAI["OpenAI Embeddings<br/>text-embedding-3-small"]
+    Graph <-->|"Drafting, revision, optional LLM judge<br/>LangChain adapters"| DeepSeek["DeepSeek Chat API"]
+    Graph -.-> Callbacks
+    Callbacks -.-> Langfuse["Langfuse<br/>Traces, evaluations, token usage, latency"]
 ```
 
-The frontend sends an explicit action:
+Public template content comes from version-controlled JSON files, with embeddings cached in PostgreSQL. Private template vectors are searched with pgvector; public vector similarity and BM25 keyword scores are computed in the backend before merging and ranking candidates. The browser accesses application data through FastAPI.
 
-```text
-new_task          -> Generate with Template
-continue_editing  -> Continue Editing
-wild              -> Generate something wild
+### AI Workflow
+
+`POST /agent/run` accepts three actions: `new_task` (Generate with Template), `continue_editing` (Continue Editing), and `wild` (Generate something wild). The planner is deterministic: it routes by action and current state, with a maximum of five tool steps per run.
+
+```mermaid
+flowchart TD
+    Request["POST /agent/run<br/>Intent, action, style, language, session ID"]
+    Request --> Load["load_session<br/>Restore draft, active template and stored history"]
+    Load --> Planner{"planner<br/>Choose next tool from action and state"}
+
+    Planner -->|"new_task: retrieve first"| Retrieve["retrieve_template<br/>Manual selection: check access and availability<br/>Automatic: semantic + BM25 retrieval and reranking"]
+    Planner -->|"new_task: candidates available"| Generate["generate_draft<br/>Apply template gate, then generate with DeepSeek"]
+    Planner -->|"continue_editing: load template if needed"| Active["load_active_template<br/>Load by ID without retrieval"]
+    Planner -->|"continue_editing: revise"| Revise["revise_draft<br/>Current draft + active template if present"]
+    Planner -->|"wild"| Wild["generate_wild<br/>No template retrieval"]
+
+    Retrieve --> Observe["observe<br/>Record tool outcome and increment step count"]
+    Generate --> Observe
+    Active --> Observe
+    Revise --> Observe
+    Wild --> Observe
+    Observe --> Planner
+
+    Planner -->|"Reply ready, blocked, or step limit reached"| Finalize["finalize"]
+    Finalize --> Eval["evaluator<br/>Deterministic checks + optional DeepSeek judge<br/>Blocked template requests receive a failed evaluation"]
+    Eval --> Retry{"Failed, has a reply,<br/>and retry remains?"}
+    Retry -->|"Yes · at most one retry"| Feedback["revise_with_feedback<br/>DeepSeek revises using evaluation feedback"]
+    Feedback --> Eval
+    Retry -->|"No"| Persist["persist_state<br/>Record run, evaluation, trace and user message"]
+    Persist --> Accepted{"Nonempty, unblocked draft<br/>and evaluation passed?"}
+    Accepted -->|"Yes"| Save["Update saved draft and active template<br/>Append accepted assistant message"]
+    Accepted -->|"No"| Keep["Preserve previously accepted draft and settings<br/>Keep rejected candidate in run record"]
+    Save --> Response["Return reply, template_meta,<br/>evaluation, state and trace to UI"]
+    Keep --> Response
 ```
 
-LangGraph agent loop:
+The final acceptance branch shows the decision inside `persist_state`, not additional LangGraph nodes. Generation, revision, and the LLM judge receive bounded conversation context; existing sessions use database history.
 
-```text
-load_session
-  -> planner
-  -> tool node
-     - retrieve_template
-     - generate_draft
-     - load_active_template
-     - revise_draft
-     - generate_wild
-  -> observe
-  -> planner
-  -> finalize
-  -> evaluator
-  -> if failed: revise_with_feedback -> evaluator
-  -> persist_state
-```
+Automatic template selection requires a hybrid score of at least `TEMPLATE_MIN_MATCH_SCORE` (default `0.60`). Qualified private templates take priority; close matches within `0.05` in the preferred group ask the user to choose. Manual selection bypasses the score threshold but still checks access and availability. Blocked template requests return selection guidance without generating a draft; choosing a template starts another request.
 
-The planner loops until the draft is complete or the step limit is reached.
-Action constraints still apply:
-
-- `new_task` can retrieve templates and generate a new draft.
-- `continue_editing` loads the active template and revises the current draft without reselecting templates.
-- `wild` generates without template retrieval.
-
-Template mode uses hybrid retrieval:
-
-```text
-query
-  -> pgvector semantic top-k over template metadata, structure, and content
-  -> BM25 keyword top-k over template metadata, structure, and content
-  -> merge candidates
-  -> weighted rerank
-  -> return top templates with scores and matched terms
-```
-
-The agent only accepts a template when its hybrid match score is at least `TEMPLATE_MIN_MATCH_SCORE`, which defaults to `0.60`.
+Implementation: [graph routing](chatbox-backend/agent/graph.py), [agent nodes](chatbox-backend/agent/nodes.py), [template retrieval](chatbox-backend/template_store.py), [session persistence](chatbox-backend/agent/store.py), and [authentication / tenancy](chatbox-backend/tenancy.py).
 
 ## 🛡️ Eval & Guardrails
 
