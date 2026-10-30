@@ -57,10 +57,10 @@ first push to an existing database only records the version.
 
 ### Deployment pipeline
 
-`.github/workflows/deploy-backend.yml` runs on every push to `master`:
+`.github/workflows/deploy-backend.yml` runs tests on every branch push and pull request. Production migration and deployment run only on pushes to `master`:
 
-1. `test`: unit and RLS tests, then `supabase db push` against a disposable
-   pgvector PostgreSQL.
+1. `test`: backend unit and RLS tests, frontend tests and production build,
+   then `supabase db push` against a disposable pgvector PostgreSQL.
 2. `migrate`: `supabase db push` against production using the
    `DATABASE_ADMIN_URL` repository secret.
 3. `deploy`: triggers the Render deploy hook.

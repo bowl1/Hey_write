@@ -216,6 +216,28 @@ The backend uses the [official LangChain/LangGraph callback integration](https:/
 
 ## 🧪 Testing
 
+### Every-commit regression gate
+
+Install the hook once per clone (dependencies must already be installed):
+
+```bash
+bash scripts/install-hooks.sh
+```
+
+Every normal `git commit` tests a temporary snapshot of the **staged files**: all backend tests, PostgreSQL/pgvector integration and RLS tests, all frontend tests, and a production frontend build. Failures, missing dependencies, or skipped backend tests block the commit. Unstaged edits are not included; the hook does not stash or modify your working files.
+
+Start Docker before committing: the gate creates and removes a disposable `pgvector/pgvector:pg17` container automatically. Alternatively, explicitly set `RLS_TEST_DATABASE_URL` to a disposable test database with administrative privileges. Never point it at production. Install dependencies with `chatbox-backend/.venv/bin/pip install -r chatbox-backend/requirements.txt` and `npm ci --prefix chatbox-frontend` (create the Python virtual environment first if needed).
+
+To run the same gate against the working tree:
+
+```bash
+bash scripts/check-all.sh
+```
+
+GitHub Actions runs the same gate on every branch push and pull request, plus a migration application check. Production migrations and deployment run only after successful checks on `master`. Configure branch protection to require the `test` check before merging: local hooks can be bypassed with `--no-verify` and are not automatically installed in a new clone. CI checks pushed commits, not unpushed local commits.
+
+Live model/embedding benchmarks under `tests/evals` remain explicit opt-in checks because they need external credentials, incur API costs, and depend on model responses. The commit gate covers the automated regression suite, not these live benchmarks. Passing tests reduces regression risk only for the behavior they cover.
+
 ### Automated checks
 
 Backend tests cover authentication, tenant isolation, conversation memory, template selection, evaluation and retries, and Langfuse integration. Frontend tests cover sign-in, template browsing and selection, highlighted templates, and draft interactions.
@@ -225,8 +247,9 @@ Backend tests cover authentication, tenant isolation, conversation memory, templ
 cd chatbox-backend
 ./.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
 
-# Optional PostgreSQL integration test (test data is rolled back)
-RUN_DB_TESTS=1 ./.venv/bin/python -m unittest discover -s tests -p 'test_tenancy_db.py'
+# Full regression gate, including disposable PostgreSQL integration tests
+# Requires Docker, or an explicit RLS_TEST_DATABASE_URL for a disposable DB
+bash ../scripts/check-all.sh
 
 # Frontend
 cd ../chatbox-frontend
@@ -251,7 +274,7 @@ Fixtures run in an isolated workspace and are rolled back. Embedding calls incur
 
 | Check | Passed / executed | Pass rate | Notes |
 | --- | ---: | ---: | --- |
-| Backend regression tests | 27 / 27 | 100% | 1 optional database test skipped |
+| Backend regression tests | 42 / 42 | 100% | Includes 8 database integration tests; no skips |
 | Frontend tests | 20 / 20 | 100% | 3 suites passed |
 | Frontend production build | 1 / 1 | 100% | Build succeeded |
 | Template decisions, threshold 0.65 | 28 / 34 | 82.4% | Recorded retrieval baseline |

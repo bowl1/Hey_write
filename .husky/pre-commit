@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Test the index, not unstaged edits. Never stash or modify the user's files.
+set -eu
+root=$(git rev-parse --show-toplevel)
+snapshot=$(mktemp -d "${TMPDIR:-/tmp}/heywrite-commit.XXXXXX")
+trap 'rm -rf "$snapshot"' EXIT
+
+git checkout-index --all --prefix="$snapshot/"
+if [ ! -f "$snapshot/scripts/check-all.sh" ]; then
+  echo "Stage scripts/check-all.sh with the hook before committing." >&2
+  exit 1
+fi
+ln -s "$root/chatbox-frontend/node_modules" "$snapshot/chatbox-frontend/node_modules"
+export HEYWRITE_TEST_PYTHON="${HEYWRITE_TEST_PYTHON:-$root/chatbox-backend/.venv/bin/python}"
+echo "Checking the staged commit snapshot..."
+bash "$snapshot/scripts/check-all.sh"
