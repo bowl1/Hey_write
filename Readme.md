@@ -1,8 +1,13 @@
-# ✨ HeyWrite - AI Smart Writing Assistant
+# ✨ HeyWrite - Automatic Template Selection from Your Own Library
 
-HeyWrite is a smart AI-powered writing assistant that helps you draft professional content based on your intent, tone, and language — all with just one sentence.
+HeyWrite finds the right template in your template library for whatever you need to write. Describe the task in plain words, for example "weekly report for the payments project", and HeyWrite picks the best-matching template and drafts on top of its structure. The template stays the source of truth: every revision is checked against it, and the changes are traced so you can see exactly what moved.
 
-Now enhanced with Retrieval-Augmented Generation (RAG), custom templates, multi-turn memory, and more — HeyWrite makes writing faster, smarter, and more personalized.
+Template selection is handled as a retrieval and decision problem, not left to a prompt:
+
+- **Hybrid retrieval**: semantic search (pgvector) and keyword search (BM25) rank candidate templates together, and the trace shows each candidate's scores and matched terms.
+- **Confidence gate**: if the best match falls below a minimum score, HeyWrite says no template fits instead of forcing one.
+- **Ask when it's close**: if several templates score almost the same, you choose which one to start from.
+- **Template-faithful drafting**: a LangGraph agent drafts from the chosen template, and an evaluator checks the result against it before it is accepted.
 
 ---
 
@@ -48,16 +53,15 @@ https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
 
 -  Choose and generate writing drafts base on the template you saved in the library
 - Choose between two generation modes:
-    - Generate with templates: AI automatically matches your input to a relevant predefined template using vector search
+    - Generate with templates: AI automatically matches your input to a relevant predefined template using hybrid retrieval (semantic search + BM25)
     - Generate something wild: Freely generate content without relying on templates
-- Your intent is automatically matched to the most relevant template using vector search. 
+- Your intent is automatically matched to the most relevant template using hybrid retrieval (semantic search + BM25).
 - If no suitable template is found, the app suggests using wild mode for freeform generation.
 
 - Maintains multi-turn conversation history
 - Revisit previous results and modify based on that
 - Summarize and highlight the changes made between the previous version and the newly generated content
 - Control tone and style: Formal, Casual, Polite Push, Concise & Direct, Humorous, or Creative
-- Supports English, Chinese, and Danish
 
 ---
 
