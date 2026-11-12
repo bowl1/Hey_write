@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { apiFetch } from "./supabase";
 import Auth from "./Auth";
+import MemoryPanel from "./components/MemoryPanel";
 import type { WorkspaceProps } from "./Auth";
 import {
   PageContainer,
@@ -768,6 +769,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
           </AccountButton>
         </AccountBar>
       <SideStack>
+        {userId && <MemoryPanel key={userId} baseUrl={BASE_URL} refreshKey={response} />}
         <Panel>
           <DropdownHeader
             type="button"
