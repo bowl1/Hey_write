@@ -22,7 +22,9 @@ Return only valid JSON. Do not include markdown.
 Evaluate whether the final draft satisfies the user's request.
 
 Checks:
-- preserves_original_structure: true if a revision keeps the previous draft's section structure and does not rewrite unrelated parts.
+- preserves_original_structure: applies ONLY to continue_editing. For new_task and wild,
+  return true: a new document need not preserve any earlier draft's structure.
+  For continue_editing, preserve unrelated sections unless the user requested a structural change.
 - completed_user_request: true if the final draft actually follows the user intent.
 - used_correct_template: true if the template behavior is correct for the selected action.
 - contains_changes: true if the response contains a clear Changes section.
@@ -32,6 +34,9 @@ Action semantics:
 - new_task should use a selected template when a template is available.
 - continue_editing should revise the current draft and should not select a new template.
 - wild should not use a template.
+For a new summary/report without source material, an explicitly labelled fill-in framework
+that identifies the missing information is valid. Do not require invented meeting facts.
+The final response should contain one coherent document and one consistent Changes section.
 
 User intent:
 {intent}
@@ -225,7 +230,7 @@ def llm_evaluate(state: dict[str, Any]) -> dict[str, Any] | None:
                 "intent": state.get("intent", ""),
                 "history": conversation_context(state),
                 "action": state.get("action", ""),
-                "previous_draft": state.get("previous_draft", ""),
+                "previous_draft": state.get("previous_draft", "") if state.get("action") == "continue_editing" else "",
                 "template_summary": template_summary,
                 "reply": state.get("reply", ""),
             }
@@ -259,7 +264,7 @@ def evaluate_agent_output(state: dict[str, Any]) -> dict[str, Any]:
         llm_checks = llm_result["checks"]
         checks["preserves_original_structure"] = (
             deterministic_checks["preserves_original_structure"]
-            and llm_checks["preserves_original_structure"]
+            and (state.get("action") != "continue_editing" or llm_checks["preserves_original_structure"])
         )
         checks["completed_user_request"] = (
             deterministic_checks["completed_user_request"]

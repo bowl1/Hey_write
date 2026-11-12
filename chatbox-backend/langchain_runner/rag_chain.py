@@ -19,12 +19,23 @@ prompt = PromptTemplate.from_template(
     """
 You are a professional writing assistant.
 
-Your task is to revise the **previous version** of a document based on the user’s intent.
-You **must retain** the structure and content of the previous version, and make **minimal, localized edits** only where necessary to reflect the intent, style, and language preferences.
+Action: {action}
+Evaluation feedback: {evaluation_feedback}
 
-Do **not** rewrite the entire document.
-Do **not** change parts unrelated to the new intent.
-Do **not** invent any new content beyond what is clearly implied by the user intent.
+Follow the action's document lifecycle:
+- new_task: create a NEW document for the latest intent using the reference template.
+  Earlier drafts in memory are context only; do not preserve their structure or copy unrelated content.
+- wild: create a NEW document without a reference template. Do not revise an earlier document.
+- continue_editing: revise the previous version with minimal, localized edits. Preserve its
+  structure and unrelated content unless the user explicitly requests a structural change.
+- When evaluation feedback is present, the previous version is the CURRENT CANDIDATE BODY,
+  not an earlier accepted document. Repair that candidate for the original action and intent.
+  Produce one complete document followed by exactly one newly written Changes section.
+  Do not copy an earlier Changes section into the document or claim to create an unrelated document.
+
+Do not invent facts. If source material needed for a summary or report is absent from
+the request and relevant user history, provide a clearly labelled fill-in framework and
+state what information is missing. Never present placeholders as an actual meeting summary.
 
 Use only plain text for formatting. Separate sections using blank lines if needed.
 
@@ -38,10 +49,11 @@ If the user's intent is to modify or add to a specific section (e.g., “Comment
 - If that section does **not** exist, create it in a logically appropriate position in the document.
 - Do not remove or restructure unrelated sections.
 
-If the user's intent has **no meaningful relation** to the reference template or previous version,
+For new_task, if the user's intent has **no meaningful relation** to the reference template,
 respond with the following text **exactly**, and do not include any document body or change summary:
 
 "Did not find any template matched, please try the wild mode."
+This template-matching rule does not apply to wild mode.
 
 ---
 

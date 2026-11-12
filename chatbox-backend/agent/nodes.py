@@ -3,7 +3,7 @@ from __future__ import annotations
 from langchain_runner.rag_chain import get_llm_chain
 from template_store import MIN_MATCH_SCORE, TEMPLATE_CHOICE_SCORE_GAP, get_template, search_templates_with_metadata
 
-from .evaluator import evaluate_agent_output
+from .evaluator import evaluate_agent_output, _draft_body
 from .state import WritingAgentState
 from .store import load_session, load_session_history, persist_agent_state
 from .memory import conversation_context
@@ -172,6 +172,8 @@ def generate_draft_node(state: WritingAgentState) -> WritingAgentState:
             "language": state.get("language") or "English",
             "context": context,
             "previous": "",
+            "action": "new_task",
+            "evaluation_feedback": "",
         }
     )
     template = top["template"]
@@ -238,7 +240,9 @@ def revise_draft_node(state: WritingAgentState) -> WritingAgentState:
             "style": state.get("style") or "Formal",
             "language": state.get("language") or "English",
             "context": active_template.get("content", "") if active_template else "",
-            "previous": current_draft,
+            "previous": _draft_body(current_draft),
+            "action": "continue_editing",
+            "evaluation_feedback": "",
         }
     )
     return {
@@ -270,7 +274,9 @@ def generate_wild_node(state: WritingAgentState) -> WritingAgentState:
             "style": state.get("style") or "Formal",
             "language": state.get("language") or "English",
             "context": "",
-            "previous": state.get("current_draft") or "",
+            "previous": "",
+            "action": "wild",
+            "evaluation_feedback": "",
         }
     )
     return {
@@ -413,17 +419,14 @@ def revise_with_feedback_node(state: WritingAgentState) -> WritingAgentState:
     context = active_template.get("content", "") if active_template else ""
     result = get_llm_chain().run(
         {
-            "intent": (
-                f"{state.get('intent', '')}\n\n"
-                f"Evaluator feedback: {feedback}\n"
-                "Revise the current draft only enough to satisfy the evaluator. "
-                "Keep the same template behavior and include a Changes section."
-            ),
+            "intent": state.get("intent", ""),
+            "action": state.get("action") or "new_task",
+            "evaluation_feedback": feedback,
             "history": conversation_context(state),
             "style": state.get("style") or "Formal",
             "language": state.get("language") or "English",
             "context": context,
-            "previous": state.get("reply") or state.get("current_draft") or "",
+            "previous": _draft_body(state.get("reply") or ""),
         }
     )
     return {
