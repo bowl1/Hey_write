@@ -11,6 +11,7 @@ from psycopg import sql
 from psycopg.rows import dict_row
 
 from agent import memory_store
+from agent.store import delete_session
 from agent.graph import run_agent
 from agent.schemas import AgentRunRequest
 from tenancy import tenant_context, configure_tenant_connection, validate_runtime_role
@@ -35,6 +36,41 @@ class MemoryDatabaseTests(unittest.TestCase):
         validate_runtime_role(self.conn)
         configure_tenant_connection(self.conn)
         return nullcontext(self.conn)
+
+    def test_delete_session_removes_related_rows_only_for_its_owner(self):
+        for user in self.users:
+            with tenant_context(user):
+                self.borrow()
+                self.conn.execute("INSERT INTO agent_sessions (session_id) VALUES ('delete-me'), ('keep-me')")
+                for sid in ("delete-me", "keep-me"):
+                    self.conn.execute("INSERT INTO messages (session_id, role, content) VALUES (%s, 'user', 'note')", (sid,))
+                    self.conn.execute("INSERT INTO agent_runs (run_id, session_id, action, intent) VALUES (%s, %s, 'wild', 'note')", (str(uuid4()), sid))
+                    self.conn.execute("INSERT INTO session_summaries (session_id, summary) VALUES (%s, 'summary')", (sid,))
+                profile = memory_store.load_profile()
+                memory_store.save_profile([
+                    {"key": "removed", "value": "Forget this", "source_session_id": "delete-me"},
+                    {"key": "retained", "value": "Keep this", "source_session_id": "keep-me"},
+                    {"key": "legacy", "value": "No recorded source"},
+                ], profile["revision"])
+        with tenant_context(str(uuid4())):
+            self.assertFalse(delete_session("delete-me"))
+        with tenant_context(self.users[0]):
+            stale_profile = memory_store.load_profile()
+            self.assertTrue(delete_session("delete-me"))
+            self.assertFalse(delete_session("delete-me"))
+            for table in ("agent_sessions", "messages", "agent_runs", "session_summaries"):
+                rows = self.conn.execute(sql.SQL("SELECT session_id FROM {}").format(sql.Identifier(table))).fetchall()
+                self.assertEqual([row["session_id"] for row in rows], ["keep-me"])
+            self.assertEqual(self.conn.execute("SELECT count(*) AS n FROM memory_profiles").fetchone()["n"], 1)
+            profile = memory_store.load_profile()
+            self.assertEqual([fact["key"] for fact in profile["facts"]], ["retained", "legacy"])
+            self.assertGreater(profile["revision"], stale_profile["revision"])
+            self.assertFalse(memory_store.save_profile(stale_profile["facts"], stale_profile["revision"]))
+        with tenant_context(self.users[1]):
+            self.borrow()
+            for table in ("agent_sessions", "messages", "agent_runs", "session_summaries"):
+                self.assertEqual(self.conn.execute(sql.SQL("SELECT count(*) AS n FROM {}").format(sql.Identifier(table))).fetchone()["n"], 2)
+            self.assertEqual(len(memory_store.load_profile()["facts"]), 3)
 
     def test_profiles_and_summaries_are_tenant_isolated_and_fail_closed(self):
         for user in self.users:

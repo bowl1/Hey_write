@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
@@ -7,7 +7,7 @@ from agent import AgentRunRequest, AgentRunResponse, run_agent
 from agent.schemas import SessionListResponse, SessionSnapshot, MemoryProfileResponse, MemorySettingsRequest
 from agent.memory_store import load_profile, configure_profile
 from agent.long_term_memory import enabled as memory_feature_enabled
-from agent.store import list_session_summaries, load_session_snapshot
+from agent.store import list_session_summaries, load_session_snapshot, delete_session
 from schemas import (
     HealthResponse, IndexStatus, Template, TemplateCreateRequest, TemplateCreateResponse,
     TemplateListResponse, WorkspaceResponse,
@@ -98,6 +98,19 @@ def agent_session(session_id: str) -> SessionSnapshot:
     except Exception as e:
         logger.error("Failed to load agent session", exc_info=True)
         raise HTTPException(status_code=503, detail=f"Agent session unavailable: {e}")
+
+
+@app.delete("/agent/session/{session_id}", status_code=204)
+def delete_agent_session(session_id: str) -> Response:
+    try:
+        if not delete_session(session_id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        return Response(status_code=204)
+    except HTTPException:
+        raise
+    except Exception:
+        logger.error("Failed to delete agent session", exc_info=True)
+        raise HTTPException(status_code=503, detail="Session could not be deleted. Please try again.")
 
 
 @app.get("/templates")

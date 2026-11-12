@@ -343,6 +343,12 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
     { role: "user" | "assistant"; content: string }[]
   >([]);
   const [sessions, setSessions] = useState<AgentSessionSummary[]>([]);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<string | null>(null);
+  const [deletingSession, setDeletingSession] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState("");
+  const [memoryRefresh, setMemoryRefresh] = useState(0);
+  const [restoringSession, setRestoringSession] = useState(false);
+  const sessionsRequest = useRef(0);
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(
     null
   );
@@ -498,21 +504,24 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
   const loadSessions = async () => {
     if (!userId) return;
     if (!BASE_URL && process.env.NODE_ENV === "production") return;
+    const requestId = ++sessionsRequest.current;
     try {
       const res = await apiFetch(`${BASE_URL}/agent/sessions`);
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const data = await res.json();
-      setSessions(data.sessions || []);
+      if (requestId === sessionsRequest.current) setSessions(data.sessions || []);
     } catch (error) {
       console.error("Failed to load sessions:", error);
     }
   };
 
   const restoreSessionById = async (targetSessionId: string) => {
+    if (loading || deletingSession || restoringSession) return;
     if (!userId) return;
     if (!targetSessionId) return;
     if (!BASE_URL && process.env.NODE_ENV === "production") return;
 
+    setRestoringSession(true);
     try {
       const res = await apiFetch(`${BASE_URL}/agent/session/${encodeURIComponent(targetSessionId)}`);
       if (res.status === 404) {
@@ -525,6 +534,8 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
       applySessionSnapshot(await res.json(), targetSessionId);
     } catch (error) {
       console.error("Failed to restore session:", error);
+    } finally {
+      setRestoringSession(false);
     }
   };
 
@@ -560,7 +571,32 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
     setDraftNotice("");
   };
 
+  const deleteSession = async (targetSessionId: string) => {
+    if (loading || deletingSession || restoringSession) return;
+    setDeletingSession(targetSessionId);
+    setSessionError("");
+    try {
+      const result = await apiFetch(`${BASE_URL}/agent/session/${encodeURIComponent(targetSessionId)}`, { method: "DELETE" });
+      // A missing session is already deleted, including deletions from another tab.
+      if (!result.ok && result.status !== 404) throw new Error("Delete failed");
+      ++sessionsRequest.current;
+      setSessions((previous) => previous.filter((session) => session.session_id !== targetSessionId));
+      setExpandedSessionId((previous) => previous === targetSessionId ? null : previous);
+      if (targetSessionId === sessionId) { resetConversation(); setIntent(""); }
+      else if (window.localStorage.getItem(SESSION_STORAGE_KEY) === targetSessionId) {
+        window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+      setDeleteConfirmation(null);
+      setMemoryRefresh((previous) => previous + 1);
+    } catch {
+      setSessionError("Could not delete this conversation. Please try again.");
+    } finally {
+      setDeletingSession(null);
+    }
+  };
+
   const runAgent = async (action: AgentAction, explicitTemplate?: { id: string; title: string }) => {
+    if (deletingSession || restoringSession) return;
     const selection = explicitTemplate || chosenTemplate;
     if (!intent.trim()) return;
     if (action === "continue_editing" && !response.trim()) return;
@@ -769,7 +805,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
           </AccountButton>
         </AccountBar>
       <SideStack>
-        {userId && <MemoryPanel key={userId} baseUrl={BASE_URL} refreshKey={response} />}
+        {userId && <MemoryPanel key={userId} baseUrl={BASE_URL} refreshKey={`${response}:${memoryRefresh}`} />}
         <Panel>
           <DropdownHeader
             type="button"
@@ -902,7 +938,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
               Back to Last Version
             </UndoButton>
           )}
-          <ResetButton onClick={resetConversation}>
+          <ResetButton onClick={resetConversation} disabled={loading || !!deletingSession || restoringSession}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M4 10a8 8 0 1 1 1 7M4 4v6h6" />
             </svg>
@@ -913,17 +949,17 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
         <GenerateButtons>
           <GenerateButton
             onClick={() => runAgent("new_task")}
-            disabled={loading}
+            disabled={loading || !!deletingSession || restoringSession}
           >
             Generate with Template
           </GenerateButton>
           <GenerateButton
             onClick={() => runAgent("continue_editing")}
-            disabled={loading || !response}
+            disabled={loading || !!deletingSession || restoringSession || !response}
           >
             Continue Editing
           </GenerateButton>
-          <GenerateButton onClick={() => runAgent("wild")} disabled={loading}>
+          <GenerateButton onClick={() => runAgent("wild")} disabled={loading || !!deletingSession || restoringSession}>
             {loading
               ? "Writing... It takes around 1 minute"
               : "✨ Generate something wild"}
@@ -1035,6 +1071,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
           onMouseDown={handleHistoryResizeStart}
         />
         <h2>Conversation History</h2>
+        {sessionError && <p role="alert">{sessionError}</p>}
         {visibleSessions.length === 0 && <p>No saved sessions yet.</p>}
         {visibleSessions.length > 0 && (
           <SessionList data-testid="session-list">
@@ -1063,11 +1100,27 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
                     </div>
                     <span>{expanded ? "▲" : "▼"}</span>
                   </SessionRow>
+                  <div style={{ padding: "0.5rem 1rem" }}>
+                    {deleteConfirmation === session.session_id ? <>
+                      <p>Permanently delete this conversation, all its messages, and personal memories saved from it?</p>
+                      <SessionOpenButton type="button" disabled={loading || !!deletingSession || restoringSession}
+                        onClick={() => deleteSession(session.session_id)}>
+                        {deletingSession === session.session_id ? "Deleting…" : "Confirm delete"}
+                      </SessionOpenButton>{" "}
+                      <SessionOpenButton type="button" disabled={!!deletingSession}
+                        onClick={() => setDeleteConfirmation(null)}>Cancel</SessionOpenButton>
+                    </> : <SessionOpenButton type="button" disabled={loading || !!deletingSession || restoringSession}
+                      aria-label={`Delete session: ${session.title || "Untitled session"}`}
+                      onClick={() => { setSessionError(""); setDeleteConfirmation(session.session_id); }}>
+                      Delete session
+                    </SessionOpenButton>}
+                  </div>
                   {expanded && (
                     <SessionMessages>
                       {session.session_id !== sessionId && (
                         <SessionOpenButton
                           type="button"
+                          disabled={loading || !!deletingSession || restoringSession}
                           onClick={() => restoreSessionById(session.session_id)}
                         >
                           Open session

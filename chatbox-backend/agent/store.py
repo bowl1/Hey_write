@@ -5,6 +5,7 @@ from typing import Any
 from psycopg.types.json import Jsonb
 
 from template_store import get_connection
+from tenancy import tenant_id
 
 from .schemas import AgentRunRecord, AgentSession, SessionMessage, SessionSnapshot, SessionSummary
 
@@ -121,6 +122,34 @@ def load_session_history(session_id: str, limit: int = 20) -> list[dict[str, str
             (session_id, limit),
         ).fetchall()
     return [{"role": row["role"], "content": row["content"]} for row in rows]
+
+
+def delete_session(session_id: str) -> bool:
+    """Remove a conversation and its sourced memories in one tenant transaction."""
+    params = (tenant_id(), session_id)
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT session_id FROM agent_sessions WHERE tenant_id = %s AND session_id = %s FOR UPDATE",
+            params,
+        ).fetchone()
+        if not row:
+            return False
+        # Invalidate any extraction that started before deletion, including extractions
+        # from other sessions whose snapshot still contains these memories.
+        conn.execute(
+            """UPDATE memory_profiles SET facts = (
+                   SELECT COALESCE(jsonb_agg(item ORDER BY position), '[]'::jsonb)
+                   FROM jsonb_array_elements(facts) WITH ORDINALITY AS entries(item, position)
+                   WHERE item->>'source_session_id' IS DISTINCT FROM %s
+               ), revision = revision + 1, updated_at = now()
+               WHERE tenant_id = %s""",
+            (session_id, tenant_id()),
+        )
+        conn.execute("DELETE FROM messages WHERE tenant_id = %s AND session_id = %s", params)
+        conn.execute("DELETE FROM agent_runs WHERE tenant_id = %s AND session_id = %s", params)
+        # session_summaries has ON DELETE CASCADE.
+        conn.execute("DELETE FROM agent_sessions WHERE tenant_id = %s AND session_id = %s", params)
+    return True
 
 
 def persist_agent_state(state: dict[str, Any]) -> dict[str, Any]:
