@@ -97,7 +97,7 @@ def ensure_workspace() -> None:
     """Check deployment readiness. New accounts require no schema/table creation."""
     from template_store import get_connection
     with get_connection() as conn:
-        for table in ("templates", "agent_sessions", "agent_runs", "messages"):
+        for table in ("templates", "agent_sessions", "agent_runs", "messages", "memory_profiles", "session_summaries"):
             row = conn.execute("""SELECT c.relrowsecurity AND c.relforcerowsecurity AS secured
                 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
                 WHERE n.nspname = 'heywrite' AND c.relname = %s AND c.relkind = 'r'""", (table,)).fetchone()

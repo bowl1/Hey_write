@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, StrictBool
 
 
 class AgentMessage(BaseModel):
@@ -84,3 +84,21 @@ class SessionSummary(BaseModel):
 
 class SessionListResponse(BaseModel):
     sessions: list[SessionSummary]
+
+
+class MemoryFact(BaseModel):
+    key: str
+    value: str
+    evidence: str
+    source_session_id: str
+
+
+class MemoryProfileResponse(BaseModel):
+    enabled: bool
+    available: bool = True
+    facts: list[MemoryFact]
+
+
+class MemorySettingsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: StrictBool

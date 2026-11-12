@@ -7,6 +7,7 @@ from .evaluator import evaluate_agent_output
 from .state import WritingAgentState
 from .store import load_session, load_session_history, persist_agent_state
 from .memory import conversation_context
+from .long_term_memory import load_memories, remember_accepted_request
 
 
 def append_trace(state: WritingAgentState, node: str, **data) -> list[dict]:
@@ -28,6 +29,9 @@ def load_session_node(state: WritingAgentState) -> WritingAgentState:
         updates["current_draft"] = state.get("current_draft") or session.get("current_draft") or ""
         updates["previous_draft"] = updates["current_draft"]
         updates["history"] = load_session_history(state["session_id"])
+    memories = load_memories(state, session_exists=bool(session))
+    updates.update(memories)
+    updates["trace"] = append_trace({**state, **updates}, "load_memory", **memories["memory_status"])
     return updates
 
 
@@ -436,6 +440,7 @@ def revise_with_feedback_node(state: WritingAgentState) -> WritingAgentState:
 
 def persist_state_node(state: WritingAgentState) -> WritingAgentState:
     saved = persist_agent_state(state)
+    memory_update = remember_accepted_request({**state, **saved})
     return {
         **saved,
         "trace": append_trace(
@@ -443,5 +448,6 @@ def persist_state_node(state: WritingAgentState) -> WritingAgentState:
             "persist_state",
             status="ok",
             session_id=state.get("session_id"),
+            memory_update=memory_update,
         )
     }

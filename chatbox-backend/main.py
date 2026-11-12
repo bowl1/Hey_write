@@ -4,7 +4,9 @@ from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 import logging
 from agent import AgentRunRequest, AgentRunResponse, run_agent
-from agent.schemas import SessionListResponse, SessionSnapshot
+from agent.schemas import SessionListResponse, SessionSnapshot, MemoryProfileResponse, MemorySettingsRequest
+from agent.memory_store import load_profile, configure_profile
+from agent.long_term_memory import enabled as memory_feature_enabled
 from agent.store import list_session_summaries, load_session_snapshot
 from schemas import (
     HealthResponse, IndexStatus, Template, TemplateCreateRequest, TemplateCreateResponse,
@@ -140,3 +142,22 @@ def create_template(body: TemplateCreateRequest) -> TemplateCreateResponse:
     except Exception as e:
         logger.error("Failed to create template", exc_info=True)
         raise HTTPException(status_code=503, detail=f"Template store unavailable: {e}")
+
+
+def memory_response(profile: dict) -> MemoryProfileResponse:
+    return MemoryProfileResponse(**profile, available=memory_feature_enabled("AGENT_MEMORY_ENABLED"))
+
+
+@app.get("/agent/memory", response_model=MemoryProfileResponse)
+def personal_memory():
+    return memory_response(load_profile())
+
+
+@app.patch("/agent/memory", response_model=MemoryProfileResponse)
+def memory_settings(body: MemorySettingsRequest):
+    return memory_response(configure_profile(enabled=body.enabled))
+
+
+@app.delete("/agent/memory", response_model=MemoryProfileResponse)
+def clear_personal_memory():
+    return memory_response(configure_profile(clear=True))

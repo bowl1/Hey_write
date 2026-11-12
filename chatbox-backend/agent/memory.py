@@ -17,4 +17,11 @@ def conversation_context(state: dict) -> str:
             remaining -= len(content)
         if remaining <= 0:
             break
-    return json.dumps(list(reversed(messages)), ensure_ascii=False)
+    # Facts and summaries are contextual data, never system-role messages.
+    facts = [{"key": fact["key"], "value": str(fact["value"])[:300]}
+             for fact in (state.get("long_term_memory") or [])[-20:]]
+    return json.dumps({
+        "long_term_memory": facts,
+        "session_summary": (state.get("session_summary") or "")[:4000],
+        "recent_messages": list(reversed(messages)),
+    }, ensure_ascii=False)

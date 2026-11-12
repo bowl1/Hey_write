@@ -12,6 +12,10 @@ class WritingAgentState(TypedDict, total=False):
     style: str
     language: str
     history: list[dict[str, str]]
+    long_term_memory: list[dict[str, Any]]
+    session_summary: str
+    memory_revision: int | None
+    memory_status: dict[str, str]
     selected_template_id: str | None
     active_template_id: str | None
     active_template: dict[str, Any] | None
