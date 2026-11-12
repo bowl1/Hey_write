@@ -417,7 +417,7 @@ export const Home: React.FC<WorkspaceProps> = ({ userId, email, onSignOut, onReq
   const BASE_URL =
     process.env.NODE_ENV === "development"
       ? "http://localhost:8000"
-      : process.env.REACT_APP_API_URL || "";
+      : "/api";
   const responseSections = splitResponseSections(response);
   const cleanDraft = cleanDisplayText(responseSections.draft || response);
   const cleanChanges = cleanDisplayText(responseSections.changes);
