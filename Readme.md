@@ -66,14 +66,14 @@ https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
 | Category        | Technology                            |
 |----------------|----------------------------------------|
 | **Frontend**    | React + TypeScript (deployed via Vercel)|
-| **Backend**     | FastAPI (deployed on Render) |
+| **Backend**     | FastAPI (deployed on AWS EC2) |
 | **AI Model**    | DeepSeek Chat API                     |
 | **Embedding**   | OpenAI Embeddings (`text-embedding-3-small`)  |
 | **Template Store**| Postgres                             |
 | **Vector Store**| pgvector                              |
 | **Agent Framework**| LangGraph controlled agent loop + LangChain model adapters |
 | **Observability** | Langfuse — agent traces, model calls, evaluation results, token usage, and latency |
-| **Deployment**  | Render + Docker+ GitHub Actions |
+| **Deployment**  | AWS EC2 + Docker + GitHub Actions |
 ---
 
 
@@ -89,7 +89,7 @@ flowchart TB
     UI <-->|"Sign-in and access token"| Auth["Supabase Auth"]
     UI <--> Local["Browser localStorage<br/>Current session ID"]
 
-    subgraph Backend["FastAPI backend · Docker on Render"]
+    subgraph Backend["FastAPI backend · Docker on AWS EC2"]
         API["Private API<br/>/agent/run · /agent/sessions<br/>/agent/session/:id · /templates · /workspace"]
         Tenant["Authentication and tenant context<br/>Verified user ID → workspace"]
         Public["GET /public/templates<br/>No authentication required"]
