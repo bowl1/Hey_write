@@ -80,4 +80,10 @@ docker rename "$candidate" heywrite-backend
 promoted=true
 docker update --restart=no heywrite-backend-previous >/dev/null
 docker stop --time 130 heywrite-backend-previous >/dev/null
+# Keep only the images behind the live and rollback containers; cleanup never fails the deploy.
+keep=$(docker inspect --format '{{.Image}}' heywrite-backend heywrite-backend-previous)
+for id in $(docker images -q --no-trunc heywrite-backend | sort -u); do
+  grep -qx "$id" <<<"$keep" || docker rmi "$id" >/dev/null 2>&1 || true
+done
+docker image prune -f >/dev/null 2>&1 || true
 echo "AWS deployment verified: $revision on port $port"
