@@ -91,8 +91,37 @@ jobs:
   deploy:
     needs: migrate
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
-      - name: Trigger Render Deploy Hook
+      - uses: actions/checkout@v4
+
+      - name: Configure pinned EC2 SSH connection
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
         run: |
-          curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+          set -euo pipefail
+          test -n "$EC2_SSH_KEY"
+          test -n "$EC2_KNOWN_HOSTS"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/heywrite_ec2
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/heywrite_ec2 ~/.ssh/known_hosts
+
+      - name: Deploy and verify AWS backend
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          set -euo pipefail
+          test -n "$EC2_HOST"
+          release_dir="/home/ubuntu/heywrite-releases/$GITHUB_SHA"
+          ssh_options=(-i ~/.ssh/heywrite_ec2 -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15)
+          git archive HEAD chatbox-backend | gzip > backend.tar.gz
+          ssh "${ssh_options[@]}" "ubuntu@$EC2_HOST" "mkdir -p '$release_dir'"
+          scp "${ssh_options[@]}" backend.tar.gz scripts/deploy-ec2.sh "ubuntu@$EC2_HOST:$release_dir/"
+          ssh "${ssh_options[@]}" "ubuntu@$EC2_HOST" "bash '$release_dir/deploy-ec2.sh' '$GITHUB_SHA'"
+
+      - name: Remove temporary SSH credentials
+        if: always()
+        run: rm -f ~/.ssh/heywrite_ec2
