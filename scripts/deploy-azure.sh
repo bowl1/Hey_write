@@ -37,8 +37,14 @@ image="$registry/heywrite-backend:$revision"
 # 使用 ACR 云端构建并推送镜像，无需本地 Docker daemon。
 # 只上传 chatbox-backend 目录，.dockerignore 排除 dotenv 等文件。
 # 构建失败时还未修改应用，不需要触发回退。
-az acr build --registry "$AZURE_CONTAINER_REGISTRY" --image "heywrite-backend:$revision" \
-  --file dockerfile chatbox-backend --only-show-errors --output none
+# 在子 shell 中进入后端目录，使 Dockerfile 路径和构建上下文都从同一目录解析。
+# 子 shell 结束后，后续部署命令仍在仓库根目录执行。
+(
+  cd chatbox-backend
+  test -f dockerfile
+  az acr build --registry "$AZURE_CONTAINER_REGISTRY" --image "heywrite-backend:$revision" \
+    --file dockerfile . --only-show-errors --output none
+)
 
 # revision 名称结合 commit、Actions run ID 和重试次数，减少重复发布时的命名冲突。
 # 手动运行时用当前时间代替 run ID；Azure revision 的完整名称为“应用名--后缀”。
