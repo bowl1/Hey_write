@@ -29,3 +29,8 @@ __pycache__
 *.pt
 *.bin
 *.safetensors
+
+# Runtime credentials must never enter an image or remote build context.
+.env
+.env.*
+*.env

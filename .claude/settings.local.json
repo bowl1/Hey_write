@@ -15,7 +15,18 @@
       "Bash(/private/tmp/claude-501/-Users-libowen-github-heywrite/765b58ee-7eae-4f56-90da-5cbc35074176/scratchpad/supabase-cli/supabase --version)",
       "Bash(psql -d postgres -Atc \"select rolname from pg_roles where rolname='heywrite_app'\")",
       "Bash(createdb hw_old)",
-      "Bash(DATABASE_ADMIN_URL=postgresql:///hw_old .venv/bin/python migrate_shared.py --runtime-role heywrite_app --skip-tenant-copy)"
+      "Bash(DATABASE_ADMIN_URL=postgresql:///hw_old .venv/bin/python migrate_shared.py --runtime-role heywrite_app --skip-tenant-copy)",
+      "Bash(chatbox-backend/.venv/bin/python -c \"import platform, pydantic; print\\(platform.machine\\(\\)\\)\")",
+      "Bash(arch -arm64 chatbox-backend/.venv/bin/python -c \"import platform, pydantic; print\\(platform.machine\\(\\)\\)\")",
+      "Bash(/usr/bin/git diff *)",
+      "Bash(/usr/bin/git commit *)",
+      "Bash(/usr/bin/git show *)",
+      "Bash(/usr/bin/git reset *)",
+      "Bash(/usr/bin/git restore *)",
+      "Bash(/usr/bin/git push *)",
+      "Bash(/usr/bin/git add *)",
+      "Bash(aws configure *)",
+      "Read(//Users/libowen/.aws/**)"
     ]
   }
 }

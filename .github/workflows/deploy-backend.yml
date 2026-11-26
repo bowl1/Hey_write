@@ -89,6 +89,7 @@ jobs:
           supabase db push --db-url "$DATABASE_ADMIN_URL" --yes
 
   deploy:
+    if: vars.BACKEND_DEPLOY_TARGET != 'azure'
     needs: migrate
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -125,3 +126,30 @@ jobs:
       - name: Remove temporary SSH credentials
         if: always()
         run: rm -f ~/.ssh/heywrite_ec2
+
+  deploy-azure:
+    if: vars.BACKEND_DEPLOY_TARGET == 'azure'
+    needs: migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Container Apps extension
+        run: az extension add --name containerapp --upgrade --yes
+
+      - name: Build, deploy and verify Azure backend
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_CONTAINER_APP: ${{ vars.AZURE_CONTAINER_APP }}
+          AZURE_CONTAINER_REGISTRY: ${{ vars.AZURE_CONTAINER_REGISTRY }}
+        run: bash scripts/deploy-azure.sh "$GITHUB_SHA"
