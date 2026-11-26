@@ -40,3 +40,6 @@ __pycache__/
 chroma_db/
 # Private database backups and migration credentials
 .local-backups/
+
+# Keep project documentation local only
+/docs/

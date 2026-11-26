@@ -70,20 +70,24 @@ https://github.com/user-attachments/assets/bca2437f-75ee-4b74-9d54-91a74065c3bc
 | Category        | Technology                            |
 |----------------|----------------------------------------|
 | **Frontend**    | React + TypeScript (deployed via Vercel)|
-| **Backend**     | FastAPI (deployed on AWS EC2) |
+| **Backend**     | FastAPI (deployed on Azure Container Apps) |
 | **AI Model**    | DeepSeek Chat API                     |
 | **Embedding**   | OpenAI Embeddings (`text-embedding-3-small`)  |
 | **Template Store**| Postgres                             |
 | **Vector Store**| pgvector                              |
 | **Agent Framework**| LangGraph controlled agent loop + LangChain model adapters |
 | **Observability** | Langfuse — agent traces, model calls, evaluation results, token usage, and latency |
-| **Deployment**  | AWS EC2 + Docker + GitHub Actions |
+| **Deployment**  | Azure Container Apps + Azure Container Registry + Docker + GitHub Actions |
 ---
 
 
 ## 📂 Architecture Overview
 
 ### System Architecture
+
+The frontend runs on Vercel, which forwards `/api/*` requests to the FastAPI backend on Azure Container Apps. Supabase continues to provide authentication and PostgreSQL with pgvector.
+
+The [GitHub Actions workflow](.github/workflows/deploy-backend.yml) runs regression tests and production database migrations before calling the [Azure deployment script](scripts/deploy-azure.sh). Docker builds the backend image on the GitHub runner, pushes it to Azure Container Registry, and deploys a new Container Apps revision. GitHub authenticates to Azure through OIDC. The script checks revision readiness and public endpoints, and attempts a rollback if deployment checks fail. Authenticated database access and model generation require separate verification.
 
 The React client uses Supabase for sign-in and sends the access token to FastAPI. Private API requests resolve the workspace from the verified user; database transactions apply that identity through `app.tenant_id` and forced row-level security (RLS).
 
@@ -93,7 +97,7 @@ flowchart TB
     UI <-->|"Sign-in and access token"| Auth["Supabase Auth"]
     UI <--> Local["Browser localStorage<br/>Current session ID"]
 
-    subgraph Backend["FastAPI backend · Docker on AWS EC2"]
+    subgraph Backend["FastAPI backend · Azure Container Apps"]
         API["Private API<br/>/agent/run · /agent/sessions<br/>/agent/session/:id · /templates · /workspace"]
         Tenant["Authentication and tenant context<br/>Verified user ID → workspace"]
         Public["GET /public/templates<br/>No authentication required"]
@@ -199,11 +203,11 @@ A failed draft receives **one feedback-driven revision** by default, followed by
 - **Template gate:** automatic matching requires a score of at least `0.60`. Qualified private templates take priority; candidates within `0.05` in the preferred group require user selection. No match or an unavailable selected template blocks generation.
 - **Template consistency:** generation uses only the selected template. Continued editing retains the active template; wild mode skips retrieval. Explicit selection still requires access to that template.
 - **Account isolation:** private endpoints validate Supabase authentication and derive the workspace from the authenticated user. Client input cannot select another user's workspace.
-- **Tenant RLS:** private data uses shared tables in the `heywrite` schema, with required `tenant_id` columns, composite keys, and forced RLS. The backend sets authenticated identity per transaction and rejects database roles that bypass RLS or own the tables. Administrative migrations are separate from runtime reads/writes. See [shared tenancy deployment](docs/shared-tenancy.md) before deploying this version.
+- **Tenant RLS:** private data uses shared tables in the `heywrite` schema, with required `tenant_id` columns, composite keys, and forced RLS. The backend sets authenticated identity per transaction and rejects database roles that bypass RLS or own the tables. Administrative migrations are separate from runtime reads/writes. Apply the versioned [Supabase migrations](supabase/migrations) before deploying this version.
 - **Bounded execution:** the graph enforces a step limit, bounded conversation context, and a retry limit.
 - **Accepted-result gate:** only nonempty, unblocked drafts that pass evaluation replace the saved draft. Failed attempts remain available for inspection and do not enter accepted assistant memory.
 
-Run database integration tests against a disposable PostgreSQL database with pgvector by setting `RLS_TEST_DATABASE_URL` and running `.venv/bin/python -m unittest discover -s tests` from `chatbox-backend`. See [migration and test instructions](docs/shared-tenancy.md).
+Run database integration tests against a disposable PostgreSQL database with pgvector by setting `RLS_TEST_DATABASE_URL` and running `.venv/bin/python -m unittest discover -s tests` from `chatbox-backend`. The full regression gate below provisions its own disposable database and applies the migrations.
 
 Generation, revisions, and the LLM evaluator receive bounded conversation context: up to 20 recent user/assistant messages, 4,000 characters per message, and 12,000 content characters total. Existing sessions load their history from the tenant's database instead of trusting the client copy. The latest request overrides conflicting older instructions.
 
