@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://16.170.1.179/:path*"
+      "destination": "https://heywrite.ashyflower-af00b56f.swedencentral.azurecontainerapps.io/:path*"
     }
   ],
   "headers": [
