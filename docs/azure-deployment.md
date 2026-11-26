@@ -110,3 +110,17 @@ Azure 后端确认正常后：
 4. 完整测试登录、生成、多轮编辑和会话恢复。
 
 **旧 EC2 先保留，等 Azure 版本通过完整测试后再停。你现在第一步只需要确认：现有 HeyWrite 镜像是否已经在镜像仓库里。**
+
+## GitHub Actions 自动发布
+
+仓库中的 `.github/workflows/deploy-backend.yml` 在测试和数据库迁移通过后，
+调用 `scripts/deploy-azure.sh`。脚本在 GitHub Ubuntu runner 上使用 Docker 构建
+`linux/amd64` 镜像，通过 OIDC 身份登录 ACR 并推送，再更新 Container App。
+它不调用 `az acr build`，因此不依赖 ACR Tasks；手动运行脚本时需要启动本地 Docker。
+
+GitHub repository variables 配置 `BACKEND_DEPLOY_TARGET=azure`、
+`AZURE_CONTAINER_APP`、`AZURE_RESOURCE_GROUP`、`AZURE_CONTAINER_REGISTRY`；
+repository secrets 配置 `AZURE_CLIENT_ID`、`AZURE_TENANT_ID`、
+`AZURE_SUBSCRIPTION_ID`，并保留数据库迁移用的 `DATABASE_ADMIN_URL`。
+部署身份需要应用更新权限和 ACR 推送权限。发布后脚本检查 revision 就绪、
+健康接口、公开模板和认证保护，失败时尝试从上一就绪 revision 复制配置回退。

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 将后端发布到已经创建并配置好的 Azure Container App。
-# 前置条件：已通过 az login 或 GitHub OIDC 登录，且拥有 ACR 构建和应用更新权限。
+# 前置条件：已通过 az login 或 GitHub OIDC 登录，且拥有 ACR 推送和应用更新权限。
+# 执行环境需要可用的 Docker daemon；GitHub 的 Ubuntu runner 已提供 Docker。
 # 运行密钥和环境变量由 Azure 保存，本脚本不读取本地 .env。
 # GitHub Actions 在测试、数据库迁移通过后调用；本脚本本身不执行迁移。
 # 手动调用示例：bash scripts/deploy-azure.sh "$(git rev-parse HEAD)"
@@ -34,17 +35,18 @@ test -n "$previous"
 registry=$(az acr show --name "$AZURE_CONTAINER_REGISTRY" --query loginServer -o tsv)
 image="$registry/heywrite-backend:$revision"
 
-# 使用 ACR 云端构建并推送镜像，无需本地 Docker daemon。
-# 只上传 chatbox-backend 目录，.dockerignore 排除 dotenv 等文件。
-# 构建失败时还未修改应用，不需要触发回退。
-# 在子 shell 中进入后端目录，使 Dockerfile 路径和构建上下文都从同一目录解析。
-# 子 shell 结束后，后续部署命令仍在仓库根目录执行。
-(
-  cd chatbox-backend
-  test -f dockerfile
-  az acr build --registry "$AZURE_CONTAINER_REGISTRY" --image "heywrite-backend:$revision" \
-    --file dockerfile . --only-show-errors --output none
-)
+# 在 runner 上构建镜像，避免依赖订阅可能禁用的 ACR Tasks 服务。
+# OIDC 登录后，通过 az acr login 让 Docker 使用当前身份推送，无需 ACR 管理员密码。
+# 构建上下文限定为 chatbox-backend，.dockerignore 排除 dotenv 等文件。
+# 固定 linux/amd64，确保从 ARM 电脑手动发布时也生成适合目标运行环境的镜像。
+# 构建或推送失败时还未修改应用，不需要触发回退。
+docker info >/dev/null
+test -f chatbox-backend/dockerfile
+az acr login --name "$AZURE_CONTAINER_REGISTRY" --output none
+docker build --platform linux/amd64 --file chatbox-backend/dockerfile \
+  --label "org.opencontainers.image.revision=$revision" \
+  --tag "$image" chatbox-backend
+docker push "$image"
 
 # revision 名称结合 commit、Actions run ID 和重试次数，减少重复发布时的命名冲突。
 # 手动运行时用当前时间代替 run ID；Azure revision 的完整名称为“应用名--后缀”。
